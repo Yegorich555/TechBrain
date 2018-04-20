@@ -259,15 +259,18 @@ namespace TechBrain.IO
 
         public bool SendWithDiscardInBuffer { get; set; } = true;
         /// <summary>
-        /// ms
+        /// Timeout for opening port (ms)
         /// </summary>
         public int OpenTimeout { get; set; } = 1000;
+
         /// <summary>
-        /// ms
+        /// Timeout for waiting receive (ms)
         /// </summary>
         public int ReceiveTimeout { get; set; } = 2000; //ms
 
-
+        /// <summary>
+        /// Quantity repeats in one transiving
+        /// </summary>
         public int RepeatQuantity { get; set; } = 1;
 
         public string PortName { get; set; } = "COM1";
