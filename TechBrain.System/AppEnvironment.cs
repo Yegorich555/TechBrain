@@ -1,4 +1,5 @@
-﻿using System.Security.Principal;
+﻿using System.Globalization;
+using System.Security.Principal;
 
 namespace TechBrain
 {
@@ -11,6 +12,14 @@ namespace TechBrain
                 var pricipal = new WindowsPrincipal(WindowsIdentity.GetCurrent());
                 var adminRights = pricipal.IsInRole(WindowsBuiltInRole.Administrator);
                 return false;
+            }
+        }
+
+        public static string NumDecSeparator
+        {
+            get
+            {
+                return CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
             }
         }
     }
