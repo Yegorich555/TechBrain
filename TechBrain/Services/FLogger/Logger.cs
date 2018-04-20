@@ -192,6 +192,7 @@ namespace TechBrain.Services.FLogger
         public static void Debug(string message)
         {
             Instance.Log(LogLevel.Debug, message);
+            Console.WriteLine(message);
         }
 
     }
