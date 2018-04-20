@@ -48,6 +48,9 @@
     <Compile Include="CustomEventArgs\CommonEventArgs.cs" />
     <Compile Include="CustomEventArgs\ComPortReceiveArgs.cs" />
     <Compile Include="AppEnvironment.cs" />
+    <Compile Include="Drivers.Uart\Command.cs" />
+    <Compile Include="Drivers.Uart\Protocol.cs" />
+    <Compile Include="Entities\SensorValue.cs" />
     <Compile Include="Extensions\CollectionExtensions.cs" />
     <Compile Include="Extensions\Extender.cs" />
     <Compile Include="Extensions\msg.cs" />
@@ -57,6 +60,8 @@
     <Compile Include="IO\ComPort.cs" />
     <Compile Include="IO\FileSystem.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Services\DateTimeService.cs" />
+    <Compile Include="Services\DevServer.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
