@@ -39,7 +39,13 @@ namespace TechBrain.Services.FLogger
         public void Log(LogLevel level, params string[] messages)
         {
             var threadId = Thread.CurrentThread.ManagedThreadId;
-            Task.Run(() => { GoLog(level, threadId, messages); });
+            if (Settings.AsyncEnable)
+            {
+                Task.Run(() => { GoLog(level, threadId, messages); });
+            }else
+            {
+                GoLog(level, threadId, messages);
+            }
         }
 
         void GoLog(LogLevel level, int threadId, params string[] messages)
@@ -70,11 +76,10 @@ namespace TechBrain.Services.FLogger
                             }
                         }
                     }
-
-                    str.Append(Environment.NewLine);
-                    str.Append(Environment.NewLine);
-
                     System.Diagnostics.Debug.WriteLine(str.ToString());
+
+                    str.Append(Environment.NewLine);
+                    str.Append(Environment.NewLine);
 
                     if (!Settings.FilePath.IsNull())
                         SaveToFile(str.ToString(), now);

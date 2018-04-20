@@ -7,6 +7,7 @@ namespace TechBrain.Services.FLogger
     {
         public LoggerSettings() { }
 
+        public bool AsyncEnable { get; set; }
         public string DateTimeFormat { get; set; } = "yyyy-MM-dd hh:mm:ss.fff";
         public string FilePath { get; set; }
         public string ArchiveFilePath { get; set; }
