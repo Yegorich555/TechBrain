@@ -142,8 +142,11 @@ namespace TechBrain.Drivers.Uart
             if (!parcel.IndexExist(i + ShiftIndexCmd))
                 return ($"It's small after CommandByte. Index {i + ShiftIndexCmd} not exists ({i},{ShiftIndexCmd})");
 
-            if (parcel[i - 1] != checkReturnAddr)
+            if (parcel[i - 1] != checkReturnAddr && checkReturnAddr != CommonAddr)
                 return ($"Returning address is not match {checkReturnAddr}");
+
+            if (parcel[i + 1] != CommonAnswerAddr)
+                return ($"Returning address is not match {CommonAnswerAddr}");
 
             var crc = GetCrc(parcel.Skip(i - 1));
             if (parcel[i - 2] != crc)
