@@ -48,9 +48,9 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\TechBrain.System\TechBrain.System.csproj">
+    <ProjectReference Include="..\TechBrain\TechBrain.csproj">
       <Project>{881B1616-AAEF-423C-BEA9-774F6D9DB04A}</Project>
-      <Name>TechBrain.System</Name>
+      <Name>TechBrain</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

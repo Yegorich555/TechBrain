@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using TechBrain.CustomEventArgs;
+using TechBrain.Drivers.Uart;
 using TechBrain.Extensions;
 using TechBrain.Services;
 
@@ -12,8 +13,12 @@ namespace ConsoleLauncher
         {
             var devServer = DevServer.Instance;
             devServer.ErrorAppeared += DevServer_ErrorAppeared;
+            devServer.ComPort.PortName = "com3";
+            Protocol.RepeatQuantity = 1;
+           
             while (true)
             {
+                
                 string txt = null;
                 try
                 {
