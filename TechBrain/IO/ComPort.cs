@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.IO.Ports;
 using System.Linq;
 using System.Threading;
@@ -220,7 +221,7 @@ namespace TechBrain.IO
                     if (PortOwnExist())
                     {
                         Thread.Sleep(1000);
-                        try { Open(); } catch (System.IO.IOException) { }
+                        try { Open(); } catch (IOException) { }
                     }
                     else Thread.Sleep(10);
                 }

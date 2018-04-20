@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27428.2037
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TechBrain.System", "TechBrain.System\TechBrain.System.csproj", "{881B1616-AAEF-423C-BEA9-774F6D9DB04A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TechBrain", "TechBrain\TechBrain.csproj", "{881B1616-AAEF-423C-BEA9-774F6D9DB04A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleLauncher", "ConsoleLauncher\ConsoleLauncher.csproj", "{64DC70AD-A753-4066-9FCE-2DFFF0E05C18}"
 EndProject
