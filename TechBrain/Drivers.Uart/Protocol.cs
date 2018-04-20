@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using TechBrain.Entities;
 using TechBrain.Extensions;
+using TechBrain.Services.FLogger;
 
 namespace TechBrain.Drivers.Uart
 {
@@ -116,23 +117,39 @@ namespace TechBrain.Drivers.Uart
 
         public static bool IsGoodQuality(IList<byte> parcel, int checkReturnAddr)
         {
+            Logger.Debug("Uart.Protocol. Checking quality...");
+
+            var err = FindError(parcel, checkReturnAddr);
+            if (err != null)
+                Logger.Debug($"Uart.Protocol. Bad quality parcel: {err}\n Parcel bytes: {Extender.BuildStringSep(" ", parcel)}");
+            else
+                Logger.Debug("Uart.Protocol. Checking quality successfull");
+
+            return err == null;
+        }
+
+        static string FindError(IList<byte> parcel, int checkReturnAddr)
+        {
+
             if (parcel == null || parcel.Count() < MinParcelSize)
-                return false;
+                return ($"It's small {parcel?.Count().ToStringNull("0")} < {MinParcelSize}");
+
             var i = parcel.IndexOf(CommandByte);
 
             if (i < MinIndexCmdByte)
-                return false;
+                return ($"IndexOf CommandByte({i}) < MinIndexCmdByte({MinIndexCmdByte})");
 
             if (!parcel.IndexExist(i + ShiftIndexCmd))
-                return false;
+                return ($"It's small after CommandByte. Index {i + ShiftIndexCmd} not exists ({i},{ShiftIndexCmd})");
 
             if (parcel[i - 1] != checkReturnAddr)
-                return false;
+                return ($"Returning address is not match {checkReturnAddr}");
 
-            if (parcel[i - 2] != GetCrc(parcel.Skip(i - 1)))
-                return false;
+            var crc = GetCrc(parcel.Skip(i - 1));
+            if (parcel[i - 2] != crc)
+                return ($"Crc Error. {parcel[i - 2]} != {crc}");
 
-            return true;
+            return null;
         }
 
         public static IEnumerable<SensorValue> ExtractSensorValues(IList<byte> parcel)
