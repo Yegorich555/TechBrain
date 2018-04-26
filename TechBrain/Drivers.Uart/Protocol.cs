@@ -107,7 +107,7 @@ namespace TechBrain.Drivers.Uart
                 if (IsGoodQuality(result, checkReturnAddr))
                     return result;
 
-                var s = result.IndexOf(StartByte);
+                var s = result.IndexOf(StartByte); //find nested parcel
                 if (s == -1)
                     return null;
 
@@ -130,7 +130,7 @@ namespace TechBrain.Drivers.Uart
 
         static string FindError(IList<byte> parcel, int checkReturnAddr)
         {
-
+            
             if (parcel == null || parcel.Count() < MinParcelSize)
                 return ($"It's small {parcel?.Count().ToStringNull("0")} < {MinParcelSize}");
 
@@ -148,7 +148,8 @@ namespace TechBrain.Drivers.Uart
             if (parcel[i + 1] != CommonAnswerAddr)
                 return ($"Returning address is not match {CommonAnswerAddr}");
 
-            var crc = GetCrc(parcel.Skip(i - 1));
+            var crcParcel = parcel.Skip(i - 1);
+            var crc = GetCrc(crcParcel.Take(crcParcel.Count()-1));
             if (parcel[i - 2] != crc)
                 return ($"Crc Error. {parcel[i - 2]} != {crc}");
 

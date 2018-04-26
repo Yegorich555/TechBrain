@@ -115,14 +115,15 @@ namespace TechBrain.IO
                     for (int i = 0; i < cnt; ++i)
                     {
                         var b = port.ReadByte();
+
                         if (goAdd)
                         {
+                            bytes.Add((byte)b);
+
                             if (b == endWaitByte)
                             {
                                 return bytes;
-                            }
-
-                            bytes.Add((byte)b);
+                            }                           
 
                             //check max length and extract new from receiving if we need
                             if (bytes.Count >= maxLength)
@@ -139,7 +140,7 @@ namespace TechBrain.IO
                                     if (s != -1)
                                     {
                                         needClear = false;
-                                        bytes = bytes.GetRangeByIndex(s + 1, bytes.Count - 1);
+                                        bytes = bytes.GetRangeByIndex(s, bytes.Count - 1);
                                     }
                                 }
 
@@ -155,6 +156,7 @@ namespace TechBrain.IO
                         else if (b == startWaitByte)
                         {
                             goAdd = true;
+                            bytes.Add((byte)b);
                         }
                     }
 
