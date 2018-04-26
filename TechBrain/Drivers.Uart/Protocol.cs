@@ -178,12 +178,10 @@ namespace TechBrain.Drivers.Uart
         public static byte? ExtractAddress(IList<byte> parcel)
         {
             int i = parcel.IndexOf(CommandByte);
-            if (i == -1)
+            if (i == -1 || i == 0)
                 return null;
 
-            if (parcel.TryGetValue(i + ShiftIndexCmd, out byte v))
-                return v;
-            return null;
+            return parcel[i - 1];
         }
 
         public static void TestCrc(Action<byte, IEnumerable<byte>> afterGetCrc)
