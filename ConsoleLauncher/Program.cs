@@ -11,14 +11,16 @@ namespace ConsoleLauncher
     {
         static void Main(string[] args)
         {
+            Console.WriteLine("Initializing devServer...");
             var devServer = DevServer.Instance;
             devServer.ErrorAppeared += DevServer_ErrorAppeared;
             devServer.ComPort.PortName = "com3";
             Protocol.RepeatQuantity = 1;
-           
+
+            Console.WriteLine("Listening you commands.");
             while (true)
             {
-                
+
                 string txt = null;
                 try
                 {
@@ -26,18 +28,19 @@ namespace ConsoleLauncher
                     if (line.ContainsText("syncTime"))
                     {
                         devServer.SyncTime();
-                        txt = "Ok";
+                        txt = "Done";
                     }
                     else if (line.ContainsText("getAddress"))
                     {
                         var str = devServer.GetAddress();
-                        txt = Extender.BuildString("Got address: ", str);
+                        txt = Extender.BuildString("Address: ", str.ToStringNull("null"));
+
                     }
                     else if (line.ContainsText("getSensors")) //getSenors(addr)
                     {
                         var addr = Convert.ToInt32(line.Extract('(', ')'));
-                        var lst = devServer.GetSensorsValues(addr);
-                        txt = Extender.BuildString("Sensors: ", lst);
+                        var lst = devServer.GetSensorsValues(addr);                       
+                        txt = "Sensors: " + Extender.BuildStringSep("; ", lst);
                     }
                     else if (line.ContainsText("setTime")) //setTime(hh,mm,weekDay)
                     {

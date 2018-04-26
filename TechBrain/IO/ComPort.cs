@@ -53,7 +53,7 @@ namespace TechBrain.IO
                         port.DiscardInBuffer();
 
                     var arr = bt.ToArray();
-                    Logger.Debug(Extender.BuildStringSep(" ", arr));
+                    Logger.Debug($"ComPort.{PortName}.Writing : {Extender.BuildStringSep(" ", arr)}");
                     for (int i = 0; i < RepeatQuantity; ++i)
                     {
                         port.Write(arr, 0, arr.Length);
@@ -72,7 +72,12 @@ namespace TechBrain.IO
             lock (readLock)
             {
                 var bytes = GoRead(startWaitByte, endWaitByte, maxLength);
-                if (bytes != null)
+                var empty = bytes == null || bytes.Count < 0;
+
+                var result = empty ? "is null" : Extender.BuildStringSep(" ", bytes);
+                Logger.Debug($"ComPort.{PortName}.Readed: {result}");
+
+                if (empty)
                     BytesReceived?.Invoke(this, new ComPortReceiveArgs(bytes));
                 return bytes;
             }
@@ -90,7 +95,7 @@ namespace TechBrain.IO
                     Thread.Sleep(1);
                     if (!LoopUntilOpen(OpenTimeout))
                     {
-                        return null;
+                        return bytes;
                     }
                     if (sw == null)
                     {
@@ -223,7 +228,7 @@ namespace TechBrain.IO
                     if (PortOwnExist())
                     {
                         Thread.Sleep(1000);
-                        try { Open(); } catch (IOException) { }
+                        try { Open(); Thread.Sleep(300); } catch (IOException) { }
                     }
                     else Thread.Sleep(10);
                 }

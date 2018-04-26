@@ -123,7 +123,7 @@ namespace TechBrain.Drivers.Uart
             if (err != null)
                 Logger.Debug($"Uart.Protocol. Bad quality parcel: {err}\n Parcel bytes: {Extender.BuildStringSep(" ", parcel)}");
             else
-                Logger.Debug("Uart.Protocol. Checking quality successfull");
+                Logger.Debug("Uart.Protocol. Checking quality: Successfull");
 
             return err == null;
         }
