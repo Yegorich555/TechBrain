@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using TechBrain.CustomEventArgs;
 using TechBrain.Extensions;
+using TechBrain.Services.FLogger;
 
 namespace TechBrain.IO
 {
@@ -52,6 +53,7 @@ namespace TechBrain.IO
                         port.DiscardInBuffer();
 
                     var arr = bt.ToArray();
+                    Logger.Debug(Extender.BuildStringSep(" ", arr));
                     for (int i = 0; i < RepeatQuantity; ++i)
                     {
                         port.Write(arr, 0, arr.Length);
