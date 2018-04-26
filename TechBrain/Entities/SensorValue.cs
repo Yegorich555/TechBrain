@@ -9,7 +9,7 @@ namespace TechBrain.Entities
     {
         public static SensorValue From2Bytes(byte highByte, byte lowByte)
         {
-            return new SensorValue((highByte << 8) | lowByte);
+            return new SensorValue((short)((highByte << 8) | lowByte));
         }
 
         private SensorValue() : this(0, DateTime.MinValue)
@@ -26,7 +26,7 @@ namespace TechBrain.Entities
         { }
 
         public int? Divider { get; private set; } = 10;// for x dig after point
-        public float? Value { get { return SourceValue / Divider; } } 
+        public float? Value { get { return (float?)SourceValue / Divider; } } 
         public int? SourceValue { get; private set; }
         public DateTime DateTime { get; private set; }
 
