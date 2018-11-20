@@ -1,14 +1,20 @@
 #include "ESP8266WiFi.h"
+#include "EEPROM.h"
 
-#define WIFI_SSID_1 "iTechArt-free" //store into eeprom
-#define WIFI_PASS_1 "password" //store into eeprom
+
+#define e_StrLen 30 //max-length 30byte
+#define e_SSID_Addr 0 //eeprom address for WIFI_SSID_1
+String WIFI_SSID_1 = ""; //stored into eeprom
+#define e_PASS_Addr (e_SSID_Addr+e_StrLen) //eeprom address for WIFI_SSID_1
+String WIFI_PASS_1 = ""; //stored into eeprom
+
 #define WIFI_SSID_2 "ESPConf" // the second wifi point if the first doesn't exist
 #define WIFI_PASS_2 "atmel^8266"
 
 #define UART_BAUD 115200
 
 #define IO_OUT1 4 //soft SDA by default
-#define IO_OUT2 5 //soft SCL by default; 
+#define IO_OUT2 5 //soft SCL by default
 #define IO_OUT3 15
 #define IO_OUT4 12
 #define IO_OUT5 13
@@ -46,6 +52,41 @@ void setup(void) {
   //pinMode(IO_OUT5, OUTPUT); digitalWrite(IO_OUT5, HIGH);
 
   pinMode(IO_IN1, INPUT_PULLUP);
+
+  EEPROM.begin(512);
+  WIFI_SSID_1 = readStrEeprom(e_SSID_Addr);
+  WIFI_PASS_1 = readStrEeprom(e_PASS_Addr);
+  //bool ok = writeStrEeprom(e_SSID_Addr, "qwerty");
+  //Serial.println(ok);
+}
+
+String readStrEeprom(int startAddress) {
+  String str = "";
+  for (int i = 0; i < e_StrLen; ++i) {
+    char v = EEPROM.read(startAddress++);
+    if (v == 0 || v == 255) {
+      break;
+    }
+    str += String(v);
+  }
+  return str;
+}
+
+bool writeStrEeprom(int startAddress, String str) {
+  unsigned int len = str.length();
+  if (len > e_StrLen) {
+    Serial.print("Err writeEEprom:maxLength ");
+    Serial.print(len); Serial.print(" > "); Serial.println(e_StrLen);
+    return false;
+  }
+  for (unsigned int i = 0; i < len; ++i) {
+    EEPROM.write(startAddress++, str[i]);
+  }
+  if (len < e_StrLen) {
+    EEPROM.write(startAddress, 0);
+  }
+  EEPROM.commit();
+  return true;
 }
 
 bool WiFi_Exists(int num, String ssid) {
