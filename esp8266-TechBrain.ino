@@ -8,26 +8,23 @@ String WIFI_SSID_1 = ""; //stored into eeprom
 #define e_PASS_Addr (e_SSID_Addr+e_StrLen) //eeprom address for WIFI_SSID_1
 String WIFI_PASS_1 = ""; //stored into eeprom
 
-#define WIFI_SSID_2 "ESPConf" // the second wifi point if the first doesn't exist
+#define WIFI_SSID_2 "ESPCfg" // the second wifi point if the first doesn't exist
 #define WIFI_PASS_2 "atmel^8266"
 
 #define UART_BAUD 115200
 
-#define IO_OUT1 4 //soft SDA by default
-#define IO_OUT2 5 //soft SCL by default
-#define IO_OUT3 15
-#define IO_OUT4 12
-#define IO_OUT5 13
-#define IO_IN1 14
-#define IO_IN4 16
+#define IO_OUT1 16
+#define IO_OUT2 14
 //#define LED_BUILTIN 2 //by default; Tx1 by default
 //#define BUTTON_BUILTIN 0 //by default
 
 void setup(void) {
+  //debug led
+  pinMode(LED_BUILTIN, OUTPUT);  digitalWrite(LED_BUILTIN, LOW);
+
   delay(100); //delay for debuging in ArduinoIDE
   Serial.begin(UART_BAUD);
   Serial.println("\nstarting...");
-
   //Serial1.begin(UART_BAUD); //Tx1 or GPIO2; Rx1 is not accessible
 
   //chip info
@@ -42,22 +39,37 @@ void setup(void) {
   Serial.printf("Flash mode:  %s\n", (ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" : ideMode == FM_DOUT ? "DOUT" : "UNKNOWN"));
 
   //pin setup
-  pinMode(LED_BUILTIN, OUTPUT); //debug led
-  digitalWrite(LED_BUILTIN, LOW);
-
   pinMode(IO_OUT1, OUTPUT); digitalWrite(IO_OUT1, LOW);
   pinMode(IO_OUT2, OUTPUT); digitalWrite(IO_OUT2, LOW);
-  //pinMode(IO_OUT3, OUTPUT); digitalWrite(IO_OUT3, HIGH);
-  //pinMode(IO_OUT4, OUTPUT); digitalWrite(IO_OUT4, HIGH);
-  //pinMode(IO_OUT5, OUTPUT); digitalWrite(IO_OUT5, HIGH);
+  //pinMode(IO_IN1, INPUT_PULLUP); bool in1 = digitalRead(IO_IN1);
 
-  pinMode(IO_IN1, INPUT_PULLUP);
-
+  //eeprom
   EEPROM.begin(512);
   WIFI_SSID_1 = readStrEeprom(e_SSID_Addr);
   WIFI_PASS_1 = readStrEeprom(e_PASS_Addr);
   //bool ok = writeStrEeprom(e_SSID_Addr, "qwerty");
   //Serial.println(ok);
+}
+
+uint8_t ledState = LOW;
+unsigned long previousMillis = 0;
+void setDebugLed(bool isOk) {
+  if (isOk) {
+    unsigned long currentMillis = millis();
+    if (currentMillis - previousMillis >= 500) {
+      previousMillis = currentMillis;
+      if (ledState == LOW) {
+        ledState = HIGH;  // Note that this switches the LED *off*
+      } else {
+        ledState = LOW;  // Note that this switches the LED *on*
+      }
+      digitalWrite(LED_BUILTIN, ledState);
+    }
+  }
+  else {
+   ledState = HIGH;
+   digitalWrite(LED_BUILTIN, ledState);
+  }
 }
 
 String readStrEeprom(int startAddress) {
@@ -100,29 +112,35 @@ bool WiFi_Exists(int num, String ssid) {
   return false;
 }
 
-String WiFi_Scan(void) {
-  //  WiFi.mode(WIFI_STA);
-  //  WiFi.disconnect();
+bool WiFi_TryConnect(void) {
+  byte status = WiFi.status();
+  if (status == WL_CONNECTED) {
+    return true; // todo getIp
+  }
 
   int n = WiFi.scanNetworks();
-  if (WiFi_Exists(n, WIFI_SSID_1)) return WIFI_SSID_1; //todo store into eeprom from UART
-  if (WiFi_Exists(n, WIFI_SSID_2)) return WIFI_SSID_2;
+  String ssid;
+  String pass;
+  if (WiFi_Exists(n, WIFI_SSID_1)) {
+    ssid = WIFI_SSID_1;
+    pass = WIFI_PASS_1;
+  }
+  else if (WiFi_Exists(n, WIFI_SSID_2)) {
+    ssid = WIFI_SSID_2;
+    pass = WIFI_PASS_2;
+  }
+  if (ssid) {    
+    WiFi.begin(ssid.c_str(), pass.c_str());
+    Serial.print("Connecting to :"); Serial.print(ssid); Serial.println(" ...");
+  }
 
-  return "";
+  return false;
 }
 
 void loop(void) {
-  //  if (!digitalRead(IO_IN1)) {
-  //    digitalWrite(IO_OUT1, LOW);
-  //  } else {
-  //    digitalWrite(IO_OUT1, HIGH);
-  //  }
-  String ssid = WiFi_Scan();
-  if (ssid == "") {
-    Serial.println("Test: no");
-  } else {
-    Serial.print("Test:yes"); Serial.println(ssid);
-  }
+  bool isConnected =  WiFi_TryConnect();
+  setDebugLed(isConnected);
+
 
   delay(1000);
   //Serial.print(".");
