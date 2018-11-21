@@ -1,7 +1,6 @@
 #include "ESP8266WiFi.h"
 #include "EEPROM.h"
 
-
 #define e_StrLen 30 //max-length 30byte
 #define e_SSID_Addr 0 //eeprom address for WIFI_SSID_1
 String WIFI_SSID_1 = ""; //stored into eeprom
@@ -15,12 +14,34 @@ String WIFI_PASS_1 = ""; //stored into eeprom
 
 #define IO_OUT1 16
 #define IO_OUT2 14
-//#define LED_BUILTIN 2 //by default; Tx1 by default
+
 //#define BUTTON_BUILTIN 0 //by default
+
+//debug led
+#define LED_BUILTIN 2 //by default and also Tx1 by default
+#include <Ticker.h>
+Ticker flipper;
+typedef enum dbgLed_mode_e {
+  dbgLed_ON = 0, //always on
+  dbgLed_Connecting, //fast blink
+  dbgLed_Connected  //long blink
+} dbgLed_mode_e;
+
+void flip() {
+  digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+}
+
+void setDbgLed(uint8_t dbgLedMode) {
+  switch (dbgLedMode) {
+    case dbgLed_ON: flipper.detach(); digitalWrite(LED_BUILTIN, LOW); break;
+    case dbgLed_Connecting: flipper.attach(0.4, flip); break;
+    case dbgLed_Connected: flipper.attach(1, flip); break;
+  }
+}
 
 void setup(void) {
   //debug led
-  pinMode(LED_BUILTIN, OUTPUT);  digitalWrite(LED_BUILTIN, LOW);
+  pinMode(LED_BUILTIN, OUTPUT); setDbgLed(dbgLed_ON);
 
   delay(100); //delay for debuging in ArduinoIDE
   Serial.begin(UART_BAUD);
@@ -49,27 +70,6 @@ void setup(void) {
   WIFI_PASS_1 = readStrEeprom(e_PASS_Addr);
   //bool ok = writeStrEeprom(e_SSID_Addr, "qwerty");
   //Serial.println(ok);
-}
-
-uint8_t ledState = LOW;
-unsigned long previousMillis = 0;
-void setDebugLed(bool isOk) {
-  if (isOk) {
-    unsigned long currentMillis = millis();
-    if (currentMillis - previousMillis >= 500) {
-      previousMillis = currentMillis;
-      if (ledState == LOW) {
-        ledState = HIGH;  // Note that this switches the LED *off*
-      } else {
-        ledState = LOW;  // Note that this switches the LED *on*
-      }
-      digitalWrite(LED_BUILTIN, ledState);
-    }
-  }
-  else {
-   ledState = HIGH;
-   digitalWrite(LED_BUILTIN, ledState);
-  }
 }
 
 String readStrEeprom(int startAddress) {
@@ -115,6 +115,7 @@ bool WiFi_Exists(int num, String ssid) {
 bool WiFi_TryConnect(void) {
   byte status = WiFi.status();
   if (status == WL_CONNECTED) {
+    setDbgLed(dbgLed_Connected);
     return true; // todo getIp
   }
 
@@ -129,21 +130,19 @@ bool WiFi_TryConnect(void) {
     ssid = WIFI_SSID_2;
     pass = WIFI_PASS_2;
   }
-  if (ssid) {    
+  if (ssid != "") {
     WiFi.begin(ssid.c_str(), pass.c_str());
-    Serial.print("Connecting to :"); Serial.print(ssid); Serial.println(" ...");
+    setDbgLed(dbgLed_Connecting);
+    Serial.print("Connecting to "); Serial.print(ssid); Serial.println(" ...");
   }
 
   return false;
 }
 
 void loop(void) {
-  bool isConnected =  WiFi_TryConnect();
-  setDebugLed(isConnected);
+  WiFi_TryConnect();
 
 
   delay(1000);
   //Serial.print(".");
-
-
 }
