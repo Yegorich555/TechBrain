@@ -25,6 +25,31 @@ typedef enum dbgLed_mode_e {
   dbgLed_Connected  //long blink
 } dbgLed_mode_e;
 
+//esp commands
+struct structCmd {
+  String str;
+  uint8_t type;
+};
+typedef enum cmd_e {
+  cmd_out1 = 0, //always on
+  cmd_out2, //fast blink
+  cmd_outAll,  //long blink
+  cmd_ssid,
+  cmd_pass,
+  cmd_rst
+} cmd_e;
+const String strCmd_Start = "esp_"; //Pattern: esp_out1(0)
+const structCmd cmd[] = { //str only in lowerCase!!!
+  { "out1", cmd_out1 },  //from out1(0) to out1(100)
+  { "out2", cmd_out2 },
+  { "outall", cmd_outAll },
+  { "ssid", cmd_ssid },
+  { "pass", cmd_pass },
+  { "rst", cmd_rst },
+};
+
+#define strArrLength(v) sizeof(v)/sizeof(v[0])
+
 void flip() {
   digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
 }
@@ -40,6 +65,7 @@ void setDbgLed(uint8_t dbgLedMode) {
 void setup(void) {
   //debug led
   pinMode(LED_BUILTIN, OUTPUT); setDbgLed(dbgLed_ON);
+  //analogWriteFreq(new_frequency); 1kHz by default
 
   delay(100); //delay for debuging in ArduinoIDE
   Serial.begin(UART_BAUD);
@@ -110,19 +136,11 @@ bool WiFi_Exists(int num, String ssid) {
   return false;
 }
 
-unsigned long prevWifi = 0;
 bool WiFi_TryConnect(void) {
   byte status = WiFi.status();
   if (status == WL_CONNECTED) {
     setDbgLed(dbgLed_Connected);
     return true; // todo getIp
-  }
-
-  unsigned long cur = millis();
-  if (cur - prevWifi >= 1000) { //each second
-    prevWifi = cur;
-  } else {
-    return false;
   }
 
   int n = WiFi.scanNetworks();
@@ -145,17 +163,16 @@ bool WiFi_TryConnect(void) {
   return false;
 }
 
-const String strCmd_Start = "esp_";
-const String strCmd[] = {
-  "out1",
-  "out2", //from out2(0) to out2(100)
-  "outAll",
-  "ssid",
-  "pass",
-  "mode", //mode(dir) for UART-TCP, mode(relay) for relay
-  "reset"
-};
-#define strArrLength(v) sizeof(v)/sizeof(v[0])
+void updatePort(const uint8_t num, String strVal) {
+  uint8_t v = (uint8_t)strVal.toInt();
+  if (v == 100)
+    digitalWrite(num, HIGH);
+  else if (v == 0)
+    digitalWrite(num, LOW);
+  else {
+    analogWrite(num, 1023 * v / 100);
+  }
+}
 
 void listenSerial() {
   size_t len = Serial.available();
@@ -178,21 +195,48 @@ void listenSerial() {
   bool ok = str.startsWith(strCmd_Start); //esp_out1(0)
   if (!ok) {
     Serial.print(bytes); //todo send to TCP
-  } else  { //checkCmd
-    for (unsigned int i = 0; i < strArrLength(strCmd); ++i) {
-      if (str.indexOf(strCmd[i], strCmd_Start.length()) != -1) {
-        Serial.print("match");
-        Serial.println(i);
-        break;
+  } else  { //getCmd
+    str = str.substring(strCmd_Start.length());
+    str.toLowerCase(); //for ignoring case
+    for (unsigned int i = 0; i < sizeof(cmd); ++i) {
+      if (str.startsWith(cmd[i].str)) {
+        if (cmd[i].type == cmd_rst) {
+          ESP.reset();
+        } else {
+          int fromIndex = cmd[i].str.length();
+          int startIndex = str.indexOf('(', fromIndex) + 1;
+          int endIndex = str.indexOf(")\n", startIndex + 1);
+          if (startIndex == 0 || endIndex == -1)
+            break;
+
+          str = str.substring(startIndex, endIndex);
+          switch (cmd[i].type) {
+            case cmd_out1: updatePort(IO_OUT1, str); break;
+            case cmd_out2: updatePort(IO_OUT2, str); break;
+            case cmd_outAll: updatePort(IO_OUT1, str); updatePort(IO_OUT2, str); break;
+            case cmd_ssid: Serial.println("ssid"); break;
+            case cmd_pass: Serial.println("pass"); break;
+          }
+          return;
+        }
       }
     }
+    Serial.println("error esp_command");
   }
 }
 
+unsigned long prevWifi = 0;
 void loop(void) {
-  WiFi_TryConnect();
+
+  unsigned long cur = millis();
+  if (cur - prevWifi >= 1000) { //each second
+    prevWifi = cur;
+    // Serial.println("try");
+    // WiFi_TryConnect();
+  }
+
   listenSerial();
 
-  delay(1000);
+  //delay(1000);
   //Serial.print(".");
 }
