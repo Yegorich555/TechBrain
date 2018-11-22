@@ -3,8 +3,8 @@
 
 #define e_StrLen 30 //max-length 30byte
 #define e_SSID_Addr 0 //eeprom address for WIFI_SSID_1
-String WIFI_SSID_1 = ""; //stored into eeprom
 #define e_PASS_Addr (e_SSID_Addr+e_StrLen) //eeprom address for WIFI_SSID_1
+String WIFI_SSID_1 = ""; //stored into eeprom
 String WIFI_PASS_1 = ""; //stored into eeprom
 
 #define WIFI_SSID_2 "ESPCfg" // the second wifi point if the first doesn't exist
@@ -14,8 +14,6 @@ String WIFI_PASS_1 = ""; //stored into eeprom
 
 #define IO_OUT1 16
 #define IO_OUT2 14
-
-//#define BUTTON_BUILTIN 0 //by default
 
 //debug led
 #define LED_BUILTIN 2 //by default and also Tx1 by default
@@ -112,11 +110,19 @@ bool WiFi_Exists(int num, String ssid) {
   return false;
 }
 
+unsigned long prevWifi = 0;
 bool WiFi_TryConnect(void) {
   byte status = WiFi.status();
   if (status == WL_CONNECTED) {
     setDbgLed(dbgLed_Connected);
     return true; // todo getIp
+  }
+
+  unsigned long cur = millis();
+  if (cur - prevWifi >= 1000) { //each second
+    prevWifi = cur;
+  } else {
+    return false;
   }
 
   int n = WiFi.scanNetworks();
@@ -139,9 +145,77 @@ bool WiFi_TryConnect(void) {
   return false;
 }
 
+int8_t char_indexOf(char *str, const char symb, int8_t startIndex = 0 )
+{
+  int8_t index = startIndex;
+  str += startIndex;
+  while (*str)
+  {
+    if (*str == symb)
+      return index;
+    ++str;
+    ++index;
+  }
+  return -1;
+}
+
+bool str_match(char *str, const char *search, uint8_t startIndex = 0)
+{
+  str += startIndex;
+  while (*search)
+  {
+    if (*str != *search)
+      return false;
+    ++search;
+    ++str;
+  }
+
+  return true;
+}
+
+const char strCmd_Start[] = "esp_";
+const char* strCmd[3] = {
+  "setout1",
+  "setout2",
+  "setoutall"
+};
+
+void listenSerial() {
+  size_t len = Serial.available();
+  //  Serial.print(sizeof(*strCmd)); Serial.print('_'); Serial.print(sizeof(strCmd_Start)); Serial.print('_');
+  //  Serial.print('_');  Serial.println(strCmd[0]);
+  if (!len) {
+    return;
+  }
+
+  if (len < 5) { //very small parcel
+    delay(5); //waiting for the rest part of parcel
+    len = Serial.available();
+  }
+
+  char bytes[len + 1];
+  for (unsigned int i = 0; i < len; ++i) {
+    bytes[i] = (char)Serial.read();
+  }
+  bytes[len] = 0;
+
+  bool ok = str_match(bytes, strCmd_Start); //esp_setout1(0)
+  if (!ok) {
+    Serial.print(bytes); //todo send to TCP
+  } else  { //checkCmd
+    for (unsigned int i = 0; i < sizeof(*strCmd) - 1; ++i) {
+      if (str_match(bytes, strCmd[i], sizeof(strCmd_Start) - 1)) {
+        Serial.print("match");
+        Serial.println(i);
+        break;
+      }
+    }
+  }
+}
+
 void loop(void) {
   WiFi_TryConnect();
-
+  listenSerial();
 
   delay(1000);
   //Serial.print(".");
