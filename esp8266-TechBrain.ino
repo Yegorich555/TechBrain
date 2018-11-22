@@ -145,45 +145,20 @@ bool WiFi_TryConnect(void) {
   return false;
 }
 
-int8_t char_indexOf(char *str, const char symb, int8_t startIndex = 0 )
-{
-  int8_t index = startIndex;
-  str += startIndex;
-  while (*str)
-  {
-    if (*str == symb)
-      return index;
-    ++str;
-    ++index;
-  }
-  return -1;
-}
-
-bool str_match(char *str, const char *search, uint8_t startIndex = 0)
-{
-  str += startIndex;
-  while (*search)
-  {
-    if (*str != *search)
-      return false;
-    ++search;
-    ++str;
-  }
-
-  return true;
-}
-
-const char strCmd_Start[] = "esp_";
-const char* strCmd[3] = {
-  "setout1",
-  "setout2",
-  "setoutall"
+const String strCmd_Start = "esp_";
+const String strCmd[] = {
+  "out1",
+  "out2", //from out2(0) to out2(100)
+  "outAll",
+  "ssid",
+  "pass",
+  "mode", //mode(dir) for UART-TCP, mode(relay) for relay
+  "reset"
 };
+#define strArrLength(v) sizeof(v)/sizeof(v[0])
 
 void listenSerial() {
   size_t len = Serial.available();
-  //  Serial.print(sizeof(*strCmd)); Serial.print('_'); Serial.print(sizeof(strCmd_Start)); Serial.print('_');
-  //  Serial.print('_');  Serial.println(strCmd[0]);
   if (!len) {
     return;
   }
@@ -198,13 +173,14 @@ void listenSerial() {
     bytes[i] = (char)Serial.read();
   }
   bytes[len] = 0;
+  String str = String(bytes);
 
-  bool ok = str_match(bytes, strCmd_Start); //esp_setout1(0)
+  bool ok = str.startsWith(strCmd_Start); //esp_out1(0)
   if (!ok) {
     Serial.print(bytes); //todo send to TCP
   } else  { //checkCmd
-    for (unsigned int i = 0; i < sizeof(*strCmd) - 1; ++i) {
-      if (str_match(bytes, strCmd[i], sizeof(strCmd_Start) - 1)) {
+    for (unsigned int i = 0; i < strArrLength(strCmd); ++i) {
+      if (str.indexOf(strCmd[i], strCmd_Start.length()) != -1) {
         Serial.print("match");
         Serial.println(i);
         break;
