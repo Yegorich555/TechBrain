@@ -201,7 +201,7 @@ void listenSerial() {
     for (unsigned int i = 0; i < sizeof(cmd); ++i) {
       if (str.startsWith(cmd[i].str)) {
         if (cmd[i].type == cmd_rst) {
-          ESP.reset();
+          ESP.restart();
         } else {
           int fromIndex = cmd[i].str.length();
           int startIndex = str.indexOf('(', fromIndex) + 1;
