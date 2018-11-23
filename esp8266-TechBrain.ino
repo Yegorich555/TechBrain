@@ -59,8 +59,13 @@ void flip()
   digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
 }
 
+uint8_t _lastDbgLedMode;
 void setDbgLed(uint8_t dbgLedMode)
 {
+  if (dbgLedMode == _lastDbgLedMode)
+    return;
+  _lastDbgLedMode = dbgLedMode;
+
   switch (dbgLedMode)
   {
   case dbgLed_ON:
@@ -151,55 +156,57 @@ bool writeStrEeprom(int startAddress, String str)
   return true;
 }
 
-bool WiFi_Exists(int num, String ssid)
-{
-  for (int i = 0; i < num; ++i)
-  {
-    if (WiFi.SSID(i) == ssid)
-    {
-      Serial.print("Found SSID: '");
-      Serial.print(ssid);
-      Serial.print("' (");
-      Serial.print(WiFi.RSSI(i));
-      Serial.println(')');
-      return true;
-    }
-  }
-  Serial.print("Not found SSID: '");
-  Serial.print(ssid);
-  Serial.println('\'');
-  return false;
-}
-
+bool _isWiFiFirst = true;
+bool _isFirstConnect = true;
+uint8_t _wifiStatus = 0;
 bool WiFi_TryConnect(void)
 {
-  byte status = WiFi.status();
+  uint8_t status = WiFi.status();
   if (status == WL_CONNECTED)
   {
-    setDbgLed(dbgLed_Connected);
-    return true; // todo getIp
+    if (_wifiStatus != status)
+    {
+      setDbgLed(dbgLed_Connected);
+      Serial.print("Connected to '");
+      Serial.print(WiFi.SSID());
+      Serial.print("' (");
+      Serial.print(WiFi.RSSI());
+      Serial.println(')');
+      _wifiStatus = status;
+    }
+    return true;
   }
 
-  int n = WiFi.scanNetworks(); //takes about 2184ms
-  String ssid;
-  String pass;
-  if (WiFi_Exists(n, WIFI_SSID_1))
+  if (_isFirstConnect || status == WL_NO_SSID_AVAIL || status == WL_CONNECT_FAILED)
   {
-    ssid = WIFI_SSID_1;
-    pass = WIFI_PASS_1;
-  }
-  else if (WiFi_Exists(n, WIFI_SSID_2))
-  {
-    ssid = WIFI_SSID_2;
-    pass = WIFI_PASS_2;
-  }
-  if (ssid != "")
-  {
+    if (!_isFirstConnect)
+    {
+      Serial.print("ConnectionFailed to '");
+      Serial.print(WiFi.SSID());
+      Serial.print("' : ");
+      Serial.println(status);
+    }
+    String ssid;
+    String pass;
+    if (_isWiFiFirst)
+    {
+      ssid = WIFI_SSID_1;
+      pass = WIFI_PASS_1;
+    }
+    else
+    {
+      ssid = WIFI_SSID_2;
+      pass = WIFI_PASS_2;
+    }
+
     WiFi.begin(ssid.c_str(), pass.c_str());
     setDbgLed(dbgLed_Connecting);
-    Serial.print("Connecting to ");
+    Serial.print("Connecting to '");
     Serial.print(ssid);
-    Serial.println(" ...");
+    Serial.println("'...");
+
+    _isWiFiFirst = !_isWiFiFirst;
+    _isFirstConnect = false;
   }
 
   return false;
@@ -286,19 +293,16 @@ void listenSerial()
   }
 }
 
-unsigned long prevWifi = 0;
+unsigned long _prevWifi = 0;
 void loop(void)
 {
   unsigned long cur = millis();
-  if (cur - prevWifi >= 1000)
-  { //each second
-    Serial.println("try");
+  if (cur - _prevWifi >= 500)
+  {
     WiFi_TryConnect();
-    prevWifi = millis();
+    _prevWifi = millis();
   }
-
   listenSerial();
 
-  //delay(1000);
   //Serial.print(".");
 }
