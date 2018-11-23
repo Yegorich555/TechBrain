@@ -208,15 +208,16 @@ void listenSerial() {
           int endIndex = str.indexOf(")\n", startIndex + 1);
           if (startIndex == 0 || endIndex == -1)
             break;
-
+          
           str = str.substring(startIndex, endIndex);
           switch (cmd[i].type) {
             case cmd_out1: updatePort(IO_OUT1, str); break;
             case cmd_out2: updatePort(IO_OUT2, str); break;
             case cmd_outAll: updatePort(IO_OUT1, str); updatePort(IO_OUT2, str); break;
-            case cmd_ssid: Serial.println("ssid"); break;
-            case cmd_pass: Serial.println("pass"); break;
+            case cmd_ssid: writeStrEeprom(e_SSID_Addr, str); break;
+            case cmd_pass: writeStrEeprom(e_PASS_Addr, str); break;
           }
+          Serial.println("OK");
           return;
         }
       }
