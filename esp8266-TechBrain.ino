@@ -34,9 +34,9 @@ struct structCmd
 };
 typedef enum cmd_e
 {
-  cmd_out1 = 0, //always on
-  cmd_out2,     //fast blink
-  cmd_outAll,   //long blink
+  cmd_out1 = 0,
+  cmd_out2,
+  cmd_outAll,
   cmd_ssid,
   cmd_pass,
   cmd_rst
@@ -44,12 +44,12 @@ typedef enum cmd_e
 const String strCmd_Start = "esp_"; //Pattern: esp_out1(0)
 const structCmd cmd[] = {
     //str only in lowerCase!!!
-    {"out1", cmd_out1}, //from out1(0) to out1(100)
-    {"out2", cmd_out2},
-    {"outall", cmd_outAll},
-    {"ssid", cmd_ssid},
-    {"pass", cmd_pass},
-    {"rst", cmd_rst},
+    {"out1", cmd_out1},     //from out1(0) to out1(100)
+    {"out2", cmd_out2},     //from out2(0) to out2(100)
+    {"outall", cmd_outAll}, //for all outs
+    {"ssid", cmd_ssid},     //esp_pass(ssidName)
+    {"pass", cmd_pass},     //esp_pass(password)
+    {"rst", cmd_rst},       //esp_rst()
 };
 
 #define strArrLength(v) sizeof(v) / sizeof(v[0])
@@ -111,8 +111,6 @@ void setup(void)
   EEPROM.begin(512);
   WIFI_SSID_1 = readStrEeprom(e_SSID_Addr);
   WIFI_PASS_1 = readStrEeprom(e_PASS_Addr);
-  //bool ok = writeStrEeprom(e_SSID_Addr, "qwerty");
-  //Serial.println(ok);
 }
 
 String readStrEeprom(int startAddress)
@@ -215,18 +213,14 @@ void updatePort(const uint8_t num, String strVal)
   else if (v == 0)
     digitalWrite(num, LOW);
   else
-  {
     analogWrite(num, 1023 * v / 100);
-  }
 }
 
 void listenSerial()
 {
   size_t len = Serial.available();
   if (!len)
-  {
     return;
-  }
 
   if (len < 5)
   {           //very small parcel
@@ -244,51 +238,47 @@ void listenSerial()
 
   bool ok = str.startsWith(strCmd_Start); //esp_out1(0)
   if (!ok)
-  {
     Serial.print(bytes); //todo send to TCP
-  }
   else
   { //getCmd
     str = str.substring(strCmd_Start.length());
-    str.toLowerCase(); //for ignoring case
-    for (unsigned int i = 0; i < sizeof(cmd); ++i)
+    int startIndex = str.indexOf('(');
+    int endIndex = str.indexOf(")\n", startIndex + 1);
+    if (startIndex != -1 && endIndex != -1)
     {
-      if (str.startsWith(cmd[i].str))
+      String cmdStr = str.substring(0, startIndex);
+      cmdStr.toLowerCase();
+      for (unsigned int i = 0; i < sizeof(cmd); ++i)
       {
-        if (cmd[i].type == cmd_rst)
+        if (cmdStr == cmd[i].str)
         {
-          ESP.restart();
-        }
-        else
-        {
-          int fromIndex = cmd[i].str.length();
-          int startIndex = str.indexOf('(', fromIndex) + 1;
-          int endIndex = str.indexOf(")\n", startIndex + 1);
-          if (startIndex == 0 || endIndex == -1)
-            break;
-
-          str = str.substring(startIndex, endIndex);
-          switch (cmd[i].type)
+          if (cmd[i].type == cmd_rst)
+            ESP.restart();
+          else
           {
-          case cmd_out1:
-            updatePort(IO_OUT1, str);
-            break;
-          case cmd_out2:
-            updatePort(IO_OUT2, str);
-            break;
-          case cmd_outAll:
-            updatePort(IO_OUT1, str);
-            updatePort(IO_OUT2, str);
-            break;
-          case cmd_ssid:
-            writeStrEeprom(e_SSID_Addr, str);
-            break;
-          case cmd_pass:
-            writeStrEeprom(e_PASS_Addr, str);
-            break;
+            str = str.substring(startIndex + 1, endIndex);
+            switch (cmd[i].type)
+            {
+            case cmd_out1:
+              updatePort(IO_OUT1, str);
+              break;
+            case cmd_out2:
+              updatePort(IO_OUT2, str);
+              break;
+            case cmd_outAll:
+              updatePort(IO_OUT1, str);
+              updatePort(IO_OUT2, str);
+              break;
+            case cmd_ssid:
+              writeStrEeprom(e_SSID_Addr, str);
+              break;
+            case cmd_pass:
+              writeStrEeprom(e_PASS_Addr, str);
+              break;
+            }
+            Serial.println("OK");
+            return;
           }
-          Serial.println("OK");
-          return;
         }
       }
     }
