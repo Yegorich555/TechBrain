@@ -128,11 +128,11 @@ bool writeStrEeprom(int startAddress, String str) {
 bool WiFi_Exists(int num, String ssid) {
   for (int i = 0; i < num; ++i) {
     if (WiFi.SSID(i) == ssid) {
-      Serial.print("Found SSID: ");  Serial.print(ssid); Serial.print(" (");  Serial.print(WiFi.RSSI(i)); Serial.println(')');
+      Serial.print("Found SSID: '");  Serial.print(ssid); Serial.print("' (");  Serial.print(WiFi.RSSI(i)); Serial.println(')');
       return true;
     }
   }
-  Serial.print("Not found SSID: "); Serial.println(ssid);
+  Serial.print("Not found SSID: '"); Serial.print(ssid); Serial.println('\'');
   return false;
 }
 
@@ -142,8 +142,8 @@ bool WiFi_TryConnect(void) {
     setDbgLed(dbgLed_Connected);
     return true; // todo getIp
   }
-
-  int n = WiFi.scanNetworks();
+  
+  int n = WiFi.scanNetworks(); //takes about 2184ms
   String ssid;
   String pass;
   if (WiFi_Exists(n, WIFI_SSID_1)) {
@@ -228,12 +228,11 @@ void listenSerial() {
 
 unsigned long prevWifi = 0;
 void loop(void) {
-
   unsigned long cur = millis();
   if (cur - prevWifi >= 1000) { //each second
-    prevWifi = cur;
-    // Serial.println("try");
-    // WiFi_TryConnect();
+    Serial.println("try");
+    WiFi_TryConnect();
+    prevWifi = millis();
   }
 
   listenSerial();
