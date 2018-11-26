@@ -10,7 +10,23 @@ String WIFI_PASS_1 = "";                     //stored into eeprom
 #define WIFI_SSID_2 "ESPCfg" // the second wifi point if the first doesn't exist
 #define WIFI_PASS_2 "atmel^8266"
 
+uint8_t WIFI_SERVER_PORT = 80;
+uint16_t SERVER_PORT = 1234; //todo store into eeprom
+uint8_t SERVER_IP_LAST = 1;  //todo store into eeprom //mask server IP = x.x.x.SERVER_IP_LAST
+uint8_t MY_SN = 0;           //SerialNumber - todo store into eeprom
+
 #define UART_BAUD 115200
+bool DEBUG_EN = true;
+#define DEBUG_MSG(v)   \
+  if (DEBUG_EN)        \
+  {                    \
+    Serial.println(v); \
+  }
+#define DEBUG_MSGF(...)         \
+  if (DEBUG_EN)                 \
+  {                             \
+    Serial.printf(__VA_ARGS__); \
+  }
 
 #define IO_OUT1 16
 #define IO_OUT2 14
@@ -81,6 +97,27 @@ void setDbgLed(uint8_t dbgLedMode)
   }
 }
 
+WiFiEventHandler stationConnectedHandler;
+WiFiEventHandler stationGotIPHandler;
+
+void onStationConnected(const WiFiEventStationModeConnected &evt)
+{
+  setDbgLed(dbgLed_Connected);
+  DEBUG_MSG("Connected to '" + evt.ssid + "' (" + WiFi.RSSI() + "db)");
+}
+
+IPAddress ipAddress;
+bool isNeedSendIp = true;
+void onStationGotIp(const WiFiEventStationModeGotIP &evt)
+{
+  if (ipAddress != evt.ip)
+  {
+    isNeedSendIp = true;
+    ipAddress = evt.ip;
+  }
+  DEBUG_MSG("IP address: " + ipAddress.toString());
+}
+
 void setup(void)
 {
   //debug led
@@ -90,7 +127,7 @@ void setup(void)
 
   delay(100); //delay for debuging in ArduinoIDE
   Serial.begin(UART_BAUD);
-  Serial.println("\nstarting...");
+  DEBUG_MSG("\nstarting...");
   //Serial1.begin(UART_BAUD); //Tx1 or GPIO2; Rx1 is not accessible
 
   //chip info
@@ -100,10 +137,10 @@ void setup(void)
   {
     Serial.printf("!!!Chip size (%u) is wrong. Real is %u\n", chipSize, chipRealSize);
   }
-  Serial.printf("CpuFreq: %u MHz\n", ESP.getCpuFreqMHz());
-  Serial.printf("Flash speed: %u Hz\n", ESP.getFlashChipSpeed());
+  DEBUG_MSGF("CpuFreq: %u MHz\n", ESP.getCpuFreqMHz());
+  DEBUG_MSGF("Flash speed: %u Hz\n", ESP.getFlashChipSpeed());
   FlashMode_t ideMode = ESP.getFlashChipMode();
-  Serial.printf("Flash mode:  %s\n", (ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" : ideMode == FM_DOUT ? "DOUT" : "UNKNOWN"));
+  DEBUG_MSGF("Flash mode:  %s\n", (ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" : ideMode == FM_DOUT ? "DOUT" : "UNKNOWN"));
 
   //pin setup
   pinMode(IO_OUT1, OUTPUT);
@@ -116,6 +153,9 @@ void setup(void)
   EEPROM.begin(512);
   WIFI_SSID_1 = readStrEeprom(e_SSID_Addr);
   WIFI_PASS_1 = readStrEeprom(e_PASS_Addr);
+
+  stationConnectedHandler = WiFi.onStationModeConnected(&onStationConnected);
+  stationGotIPHandler = WiFi.onStationModeGotIP(&onStationGotIp);
 }
 
 String readStrEeprom(int startAddress)
@@ -125,9 +165,8 @@ String readStrEeprom(int startAddress)
   {
     char v = EEPROM.read(startAddress++);
     if (v == 0 || v == 255)
-    {
       break;
-    }
+
     str += String(v);
   }
   return str;
@@ -138,54 +177,32 @@ bool writeStrEeprom(int startAddress, String str)
   unsigned int len = str.length();
   if (len > e_StrLen)
   {
-    Serial.print("Err writeEEprom:maxLength ");
-    Serial.print(len);
-    Serial.print(" > ");
-    Serial.println(e_StrLen);
+    Serial.println("Err writeEEprom: maxLength " + len + String(" > ") + e_StrLen);
     return false;
   }
   for (unsigned int i = 0; i < len; ++i)
-  {
     EEPROM.write(startAddress++, str[i]);
-  }
+
   if (len < e_StrLen)
-  {
     EEPROM.write(startAddress, 0);
-  }
+
   EEPROM.commit();
   return true;
 }
 
 bool _isWiFiFirst = true;
 bool _isFirstConnect = true;
-uint8_t _wifiStatus = 0;
 bool WiFi_TryConnect(void)
 {
   uint8_t status = WiFi.status();
   if (status == WL_CONNECTED)
-  {
-    if (_wifiStatus != status)
-    {
-      setDbgLed(dbgLed_Connected);
-      Serial.print("Connected to '");
-      Serial.print(WiFi.SSID());
-      Serial.print("' (");
-      Serial.print(WiFi.RSSI());
-      Serial.println(')');
-      _wifiStatus = status;
-    }
     return true;
-  }
 
   if (_isFirstConnect || status == WL_NO_SSID_AVAIL || status == WL_CONNECT_FAILED)
   {
     if (!_isFirstConnect)
-    {
-      Serial.print("ConnectionFailed to '");
-      Serial.print(WiFi.SSID());
-      Serial.print("' : ");
-      Serial.println(status);
-    }
+      DEBUG_MSG("ConnectionFailed to '" + WiFi.SSID() + "': " + status);
+
     String ssid;
     String pass;
     if (_isWiFiFirst)
@@ -201,9 +218,7 @@ bool WiFi_TryConnect(void)
 
     WiFi.begin(ssid.c_str(), pass.c_str());
     setDbgLed(dbgLed_Connecting);
-    Serial.print("Connecting to '");
-    Serial.print(ssid);
-    Serial.println("'...");
+    DEBUG_MSG("Connecting to '" + ssid + "'...");
 
     _isWiFiFirst = !_isWiFiFirst;
     _isFirstConnect = false;
@@ -293,16 +308,74 @@ void listenSerial()
   }
 }
 
+bool TCP_SendNumber(IPAddress ipAddr, uint16_t port)
+{
+  DEBUG_MSG("TCP > connecting to '" + ipAddr.toString() + ':' + port + "'...");
+
+  WiFiClient client;
+  if (!client.connect(ipAddr, port))
+  {
+    DEBUG_MSG("TCP > connection failed");
+    return false;
+  }
+
+  client.println("I am (" + String(MY_SN) + ')');
+  unsigned long timeout = millis();
+  while (millis() - timeout < 5000) // timeout 5000ms
+  {
+    if (client.available())
+    {
+      String line = client.readStringUntil('\r'); //default timeout 1000ms
+      if (line.equalsIgnoreCase("OK"))
+      {
+        isNeedSendIp = false;
+        client.stop();
+        DEBUG_MSG("TCP > sending is ok");
+        return true;
+      }
+      else
+        DEBUG_MSG("TCP > sending failed: '" + line + '\'');
+    }
+  }
+
+  DEBUG_MSG("TCP > timeout");
+  client.stop();
+  return false;
+}
+
+WiFiServer server(WIFI_SERVER_PORT);
+void TCP_Loop()
+{
+  if (isNeedSendIp)
+  {
+    IPAddress serverIP = IPAddress(ipAddress);
+    serverIP[3] = SERVER_IP_LAST;
+    for (uint8_t i = 0; i < 3; ++i) //3 times for different ports
+    {
+      if (TCP_SendNumber(serverIP, SERVER_PORT + i))
+      {
+        isNeedSendIp = false;
+        break;
+      }
+    }
+  }
+  if (isNeedSendIp)
+    return;
+
+  server.begin();
+  DEBUG_MSG("Server started: " + String(server.status()));
+}
+
 unsigned long _prevWifi = 0;
 void loop(void)
 {
   unsigned long cur = millis();
   if (cur - _prevWifi >= 500)
   {
-    WiFi_TryConnect();
+    bool isConnected = WiFi_TryConnect();
+    if (isConnected)
+      TCP_Loop();
     _prevWifi = millis();
   }
   listenSerial();
-
-  //Serial.print(".");
 }
