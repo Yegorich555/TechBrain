@@ -3,20 +3,25 @@
 
 #define e_StrLen 30                          //max-length 30byte
 #define e_SSID_Addr 0                        //eeprom address for WIFI_SSID_1
-#define e_PASS_Addr (e_SSID_Addr + e_StrLen) //eeprom address for WIFI_SSID_1
-String WIFI_SSID_1 = "";                     //stored into eeprom
-String WIFI_PASS_1 = "";                     //stored into eeprom
+#define e_PASS_Addr (e_SSID_Addr + e_StrLen) //eeprom address for WIFI_PASS_1
+#define e_DBG_Addr (e_PASS_Addr + e_StrLen)  //eeprom address for Debug (ON/OFF)
+#define e_SN_Addr (e_DBG_Addr + 1)           //eeprom address for Serial Number (max 2 bytes)
+#define e_SRVPORT_Addr (e_SN_Addr + 2)       //eeprom address for Server_PORT (2 bytes)
+#define e_SRVIPL_Addr (e_SRVPORT_Addr + 2)   //eeprom address for SERVER_IP_LAST
+
+String WIFI_SSID_1 = ""; //stored into eeprom
+String WIFI_PASS_1 = ""; //stored into eeprom
 
 #define WIFI_SSID_2 "ESPCfg" // the second wifi point if the first doesn't exist
 #define WIFI_PASS_2 "atmel^8266"
 
 uint8_t WIFI_SERVER_PORT = 80;
-uint16_t SERVER_PORT = 1234; //todo store into eeprom
-uint8_t SERVER_IP_LAST = 1;  //todo store into eeprom //mask server IP = x.x.x.SERVER_IP_LAST
-uint8_t MY_SN = 0;           //SerialNumber - todo store into eeprom
+uint16_t SERVER_PORT = 1234; //stored into eeprom
+uint8_t SERVER_IP_LAST = 1;  //stored into eeprom //mask server IP = x.x.x.SERVER_IP_LAST
+uint8_t MY_SN = 0;           //stored into eeprom - SerialNumber
 
 #define UART_BAUD 115200
-bool DEBUG_EN = true;
+bool DEBUG_EN = true; //stored into eeprom
 #define DEBUG_MSG(v)   \
   if (DEBUG_EN)        \
   {                    \
@@ -50,12 +55,16 @@ struct structCmd
 };
 typedef enum cmd_e
 {
-  cmd_out1 = 0,
-  cmd_out2,
-  cmd_outAll,
-  cmd_ssid,
-  cmd_pass,
-  cmd_rst
+  cmd_out1 = 0, //change output 1
+  cmd_out2,     //change output 2
+  cmd_outAll,   //change all outputs
+  cmd_ssid,     //set WiFi ssid
+  cmd_pass,     //set WiFi password
+  cmd_rst,      // reset chip
+  cmd_dbg,      // turn debug on/off
+  cmd_sn,       // set serial number
+  cmd_port,     // set serverPort,
+  cmd_ipl       //last number of server's IP address
 } cmd_e;
 const String strCmd_Start = "esp_"; //Pattern: esp_out1(0)
 const structCmd cmd[] = {
@@ -66,6 +75,10 @@ const structCmd cmd[] = {
     {"ssid", cmd_ssid},     //esp_pass(ssidName)
     {"pass", cmd_pass},     //esp_pass(password)
     {"rst", cmd_rst},       //esp_rst()
+    {"dbg", cmd_dbg},       //esp_dbg(0) - esp_dbg(1)
+    {"sn", cmd_sn},         //esp_sn(serialNumber)
+    {"port", cmd_port},     //esp_port(portNumber)
+    {"ipl", cmd_ipl},       //esp_ipl(ipLastNumber)
 };
 
 #define strArrLength(v) sizeof(v) / sizeof(v[0])
@@ -151,17 +164,30 @@ void setup(void)
 
   //eeprom
   EEPROM.begin(512);
-  WIFI_SSID_1 = readStrEeprom(e_SSID_Addr);
-  WIFI_PASS_1 = readStrEeprom(e_PASS_Addr);
+  WIFI_SSID_1 = EEPROM_ReadStr(e_SSID_Addr, e_StrLen);
+  WIFI_PASS_1 = EEPROM_ReadStr(e_PASS_Addr, e_StrLen);
+  DEBUG_EN = EEPROM.read(e_DBG_Addr) != 0;
+  MY_SN = EEPROM.read(e_SN_Addr);
+  // SERVER_PORT = EEPROM_ReadInt(e_SRVPORT_Addr);
+  // SERVER_IP_LAST = EEPROM.read(e_SRVIPL_Addr);
 
   stationConnectedHandler = WiFi.onStationModeConnected(&onStationConnected);
   stationGotIPHandler = WiFi.onStationModeGotIP(&onStationGotIp);
 }
 
-String readStrEeprom(int startAddress)
+//This function will read a 2 byte integer from the eeprom at the specified address and address + 1
+unsigned int EEPROM_ReadInt(int p_address)
+{
+  byte lowByte = EEPROM.read(p_address);
+  byte highByte = EEPROM.read(p_address + 1);
+
+  return ((lowByte << 0) & 0xFF) + ((highByte << 8) & 0xFF00);
+}
+
+String EEPROM_ReadStr(int startAddress, uint8_t length)
 {
   String str = "";
-  for (int i = 0; i < e_StrLen; ++i)
+  for (uint8_t i = 0; i < length; ++i)
   {
     char v = EEPROM.read(startAddress++);
     if (v == 0 || v == 255)
@@ -172,7 +198,23 @@ String readStrEeprom(int startAddress)
   return str;
 }
 
-bool writeStrEeprom(int startAddress, String str)
+void EEPROM_Write(int address, uint8_t value)
+{
+  EEPROM.write(address, value);
+  EEPROM.commit();
+}
+
+void EEPROM_Write(int address, uint16_t value)
+{
+  byte lowByte = ((value >> 0) & 0xFF);
+  byte highByte = ((value >> 8) & 0xFF);
+
+  EEPROM.write(address, lowByte);
+  EEPROM.write(address + 1, highByte);
+  EEPROM.commit();
+}
+
+bool EEPROM_Write(int startAddress, String str)
 {
   unsigned int len = str.length();
   if (len > e_StrLen)
@@ -279,8 +321,19 @@ void listenSerial()
           else
           {
             str = str.substring(startIndex + 1, endIndex);
+            uint8_t v = 0;
+            uint16_t v16 = 0;
             switch (cmd[i].type)
             {
+            case cmd_ssid:
+              if (EEPROM_Write(e_SSID_Addr, str))
+                WIFI_SSID_1 = str;
+              break;
+            case cmd_pass:
+              if (EEPROM_Write(e_PASS_Addr, str))
+                WIFI_PASS_1 = str;
+              break;
+
             case cmd_out1:
               updatePort(IO_OUT1, str);
               break;
@@ -291,11 +344,26 @@ void listenSerial()
               updatePort(IO_OUT1, str);
               updatePort(IO_OUT2, str);
               break;
-            case cmd_ssid:
-              writeStrEeprom(e_SSID_Addr, str);
+
+            case cmd_dbg:
+              v = (uint8_t)str.toInt();
+              EEPROM_Write(e_DBG_Addr, v);
+              DEBUG_EN = v != 0;
               break;
-            case cmd_pass:
-              writeStrEeprom(e_PASS_Addr, str);
+            case cmd_sn:
+              v = (uint8_t)str.toInt();
+              EEPROM_Write(e_SN_Addr, v);
+              MY_SN = v;
+              break;
+            case cmd_port:
+              v16 = (uint16_t)str.toInt();
+              EEPROM_Write(e_SRVPORT_Addr, v16);
+              SERVER_PORT = v16;
+              break;
+            case cmd_ipl:
+              v = (uint8_t)str.toInt();
+              EEPROM_Write(e_SRVIPL_Addr, v);
+              SERVER_IP_LAST = v;
               break;
             }
             Serial.println("OK");
@@ -304,7 +372,7 @@ void listenSerial()
         }
       }
     }
-    Serial.println("error esp_command");
+    Serial.println("Error esp_command");
   }
 }
 
