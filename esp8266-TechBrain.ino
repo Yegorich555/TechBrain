@@ -1,5 +1,6 @@
-#include "ESP8266WiFi.h"
-#include "EEPROM.h"
+#include <ESP8266WiFi.h>
+#include <EEPROM.h>
+#include "extensions.h"
 
 #define e_StrLen 30                          //max-length 30byte
 #define e_SSID_Addr 0                        //eeprom address for WIFI_SSID_1
@@ -163,73 +164,16 @@ void setup(void)
   //pinMode(IO_IN1, INPUT_PULLUP); bool in1 = digitalRead(IO_IN1);
 
   //eeprom
-  EEPROM.begin(512);
-  WIFI_SSID_1 = EEPROM_ReadStr(e_SSID_Addr, e_StrLen);
-  WIFI_PASS_1 = EEPROM_ReadStr(e_PASS_Addr, e_StrLen);
-  DEBUG_EN = EEPROM.read(e_DBG_Addr) != 0;
-  MY_SN = EEPROM.read(e_SN_Addr);
-  // SERVER_PORT = EEPROM_ReadInt(e_SRVPORT_Addr);
-  // SERVER_IP_LAST = EEPROM.read(e_SRVIPL_Addr);
+  EEPROM_EXT.begin(512);
+  WIFI_SSID_1 = EEPROM_EXT.ReadStr(e_SSID_Addr, e_StrLen);
+  WIFI_PASS_1 = EEPROM_EXT.ReadStr(e_PASS_Addr, e_StrLen);
+  DEBUG_EN = EEPROM_EXT.read(e_DBG_Addr) != 0;
+  MY_SN = EEPROM_EXT.read(e_SN_Addr);
+  // SERVER_PORT = EEPROM_EXT.ReadInt(e_SRVPORT_Addr);
+  // SERVER_IP_LAST = EEPROM_EXT.read(e_SRVIPL_Addr);
 
   stationConnectedHandler = WiFi.onStationModeConnected(&onStationConnected);
   stationGotIPHandler = WiFi.onStationModeGotIP(&onStationGotIp);
-}
-
-//This function will read a 2 byte integer from the eeprom at the specified address and address + 1
-unsigned int EEPROM_ReadInt(int p_address)
-{
-  byte lowByte = EEPROM.read(p_address);
-  byte highByte = EEPROM.read(p_address + 1);
-
-  return ((lowByte << 0) & 0xFF) + ((highByte << 8) & 0xFF00);
-}
-
-String EEPROM_ReadStr(int startAddress, uint8_t length)
-{
-  String str = "";
-  for (uint8_t i = 0; i < length; ++i)
-  {
-    char v = EEPROM.read(startAddress++);
-    if (v == 0 || v == 255)
-      break;
-
-    str += String(v);
-  }
-  return str;
-}
-
-void EEPROM_Write(int address, uint8_t value)
-{
-  EEPROM.write(address, value);
-  EEPROM.commit();
-}
-
-void EEPROM_Write(int address, uint16_t value)
-{
-  byte lowByte = ((value >> 0) & 0xFF);
-  byte highByte = ((value >> 8) & 0xFF);
-
-  EEPROM.write(address, lowByte);
-  EEPROM.write(address + 1, highByte);
-  EEPROM.commit();
-}
-
-bool EEPROM_Write(int startAddress, String str)
-{
-  unsigned int len = str.length();
-  if (len > e_StrLen)
-  {
-    Serial.println("Err writeEEprom: maxLength " + len + String(" > ") + e_StrLen);
-    return false;
-  }
-  for (unsigned int i = 0; i < len; ++i)
-    EEPROM.write(startAddress++, str[i]);
-
-  if (len < e_StrLen)
-    EEPROM.write(startAddress, 0);
-
-  EEPROM.commit();
-  return true;
 }
 
 bool _isWiFiFirst = true;
@@ -326,11 +270,11 @@ void listenSerial()
             switch (cmd[i].type)
             {
             case cmd_ssid:
-              if (EEPROM_Write(e_SSID_Addr, str))
+              if (EEPROM_EXT.Write(e_SSID_Addr, str, e_StrLen))
                 WIFI_SSID_1 = str;
               break;
             case cmd_pass:
-              if (EEPROM_Write(e_PASS_Addr, str))
+              if (EEPROM_EXT.Write(e_PASS_Addr, str, e_StrLen))
                 WIFI_PASS_1 = str;
               break;
 
@@ -347,22 +291,22 @@ void listenSerial()
 
             case cmd_dbg:
               v = (uint8_t)str.toInt();
-              EEPROM_Write(e_DBG_Addr, v);
+              EEPROM_EXT.Write(e_DBG_Addr, v);
               DEBUG_EN = v != 0;
               break;
             case cmd_sn:
               v = (uint8_t)str.toInt();
-              EEPROM_Write(e_SN_Addr, v);
+              EEPROM_EXT.Write(e_SN_Addr, v);
               MY_SN = v;
               break;
             case cmd_port:
               v16 = (uint16_t)str.toInt();
-              EEPROM_Write(e_SRVPORT_Addr, v16);
+              EEPROM_EXT.Write(e_SRVPORT_Addr, v16);
               SERVER_PORT = v16;
               break;
             case cmd_ipl:
               v = (uint8_t)str.toInt();
-              EEPROM_Write(e_SRVIPL_Addr, v);
+              EEPROM_EXT.Write(e_SRVIPL_Addr, v);
               SERVER_IP_LAST = v;
               break;
             }
