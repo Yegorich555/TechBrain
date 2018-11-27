@@ -3,15 +3,20 @@
 
 #include "extensions.h"
 
-unsigned int EEPROM_EXTClass::ReadInt(int p_address)
+byte EEPROM_EXTClass::readByte(int address)
 {
-  byte lowByte = EEPROM.read(p_address);
-  byte highByte = EEPROM.read(p_address + 1);
+  return EEPROM.read(address);
+}
+
+int EEPROM_EXTClass::readInt(int address)
+{
+  byte lowByte = EEPROM.read(address);
+  byte highByte = EEPROM.read(address + 1);
 
   return ((lowByte << 0) & 0xFF) + ((highByte << 8) & 0xFF00);
 }
 
-String EEPROM_EXTClass::ReadStr(int startAddress, uint8_t length)
+String EEPROM_EXTClass::readStr(int startAddress, uint8_t length)
 {
   String str = "";
   for (uint8_t i = 0; i < length; ++i)
@@ -25,14 +30,14 @@ String EEPROM_EXTClass::ReadStr(int startAddress, uint8_t length)
   return str;
 }
 
-bool EEPROM_EXTClass::Write(int address, uint8_t value)
+bool EEPROM_EXTClass::write(int address, uint8_t value)
 {
   EEPROM.write(address, value);
   EEPROM.commit();
   return true;
 }
 
-bool EEPROM_EXTClass::Write(int address, uint16_t value)
+bool EEPROM_EXTClass::write(int address, uint16_t value)
 {
   byte lowByte = ((value >> 0) & 0xFF);
   byte highByte = ((value >> 8) & 0xFF);
@@ -43,7 +48,7 @@ bool EEPROM_EXTClass::Write(int address, uint16_t value)
   return true;
 }
 
-bool EEPROM_EXTClass::Write(int startAddress, String str, uint8_t maxlength)
+bool EEPROM_EXTClass::write(int startAddress, String str, uint8_t maxlength)
 {
   unsigned int len = str.length();
   if (len > maxlength)

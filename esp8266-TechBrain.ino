@@ -139,10 +139,27 @@ void setup(void)
   setDbgLed(dbgLed_ON);
   //analogWriteFreq(new_frequency); 1kHz by default
 
-  delay(100); //delay for debuging in ArduinoIDE
   Serial.begin(UART_BAUD);
-  DEBUG_MSG("\nstarting...");
   //Serial1.begin(UART_BAUD); //Tx1 or GPIO2; Rx1 is not accessible
+
+  //eeprom
+  EEPROM.begin(512);
+  DEBUG_EN = EEPROM_EXT.readByte(e_DBG_Addr) != 0;
+
+  if (DEBUG_EN)
+    delay(500); //delay for debuging in ArduinoIDE
+  DEBUG_MSG("\nstarting...");
+
+  WIFI_SSID_1 = EEPROM_EXT.readStr(e_SSID_Addr, e_StrLen);
+  WIFI_PASS_1 = EEPROM_EXT.readStr(e_PASS_Addr, e_StrLen);
+  MY_SN = EEPROM_EXT.readByte(e_SN_Addr);
+  SERVER_PORT = EEPROM_EXT.readInt(e_SRVPORT_Addr);
+  SERVER_IP_LAST = EEPROM_EXT.readByte(e_SRVIPL_Addr);
+
+  Serial.println("eeprom...");
+  Serial.println(SERVER_PORT);
+  Serial.println(MY_SN);
+  Serial.println("eeprom finish...");
 
   //chip info
   uint32_t chipRealSize = ESP.getFlashChipRealSize();
@@ -163,15 +180,7 @@ void setup(void)
   digitalWrite(IO_OUT2, LOW);
   //pinMode(IO_IN1, INPUT_PULLUP); bool in1 = digitalRead(IO_IN1);
 
-  //eeprom
-  EEPROM_EXT.begin(512);
-  WIFI_SSID_1 = EEPROM_EXT.ReadStr(e_SSID_Addr, e_StrLen);
-  WIFI_PASS_1 = EEPROM_EXT.ReadStr(e_PASS_Addr, e_StrLen);
-  DEBUG_EN = EEPROM_EXT.read(e_DBG_Addr) != 0;
-  MY_SN = EEPROM_EXT.read(e_SN_Addr);
-  // SERVER_PORT = EEPROM_EXT.ReadInt(e_SRVPORT_Addr);
-  // SERVER_IP_LAST = EEPROM_EXT.read(e_SRVIPL_Addr);
-
+  //wifi setup
   stationConnectedHandler = WiFi.onStationModeConnected(&onStationConnected);
   stationGotIPHandler = WiFi.onStationModeGotIP(&onStationGotIp);
 }
@@ -270,11 +279,11 @@ void listenSerial()
             switch (cmd[i].type)
             {
             case cmd_ssid:
-              if (EEPROM_EXT.Write(e_SSID_Addr, str, e_StrLen))
+              if (EEPROM_EXT.write(e_SSID_Addr, str, e_StrLen))
                 WIFI_SSID_1 = str;
               break;
             case cmd_pass:
-              if (EEPROM_EXT.Write(e_PASS_Addr, str, e_StrLen))
+              if (EEPROM_EXT.write(e_PASS_Addr, str, e_StrLen))
                 WIFI_PASS_1 = str;
               break;
 
@@ -291,26 +300,28 @@ void listenSerial()
 
             case cmd_dbg:
               v = (uint8_t)str.toInt();
-              EEPROM_EXT.Write(e_DBG_Addr, v);
+              EEPROM_EXT.write(e_DBG_Addr, v);
               DEBUG_EN = v != 0;
               break;
             case cmd_sn:
               v = (uint8_t)str.toInt();
-              EEPROM_EXT.Write(e_SN_Addr, v);
+              EEPROM_EXT.write(e_SN_Addr, v);
               MY_SN = v;
               break;
             case cmd_port:
               v16 = (uint16_t)str.toInt();
-              EEPROM_EXT.Write(e_SRVPORT_Addr, v16);
+              EEPROM_EXT.write(e_SRVPORT_Addr, v16);
               SERVER_PORT = v16;
               break;
             case cmd_ipl:
               v = (uint8_t)str.toInt();
-              EEPROM_EXT.Write(e_SRVIPL_Addr, v);
+              EEPROM_EXT.write(e_SRVIPL_Addr, v);
               SERVER_IP_LAST = v;
               break;
             }
-            Serial.println("OK");
+            Serial.print("OK: ");
+            Serial.println(bytes);
+
             return;
           }
         }
@@ -381,13 +392,13 @@ void TCP_Loop()
 unsigned long _prevWifi = 0;
 void loop(void)
 {
-  unsigned long cur = millis();
-  if (cur - _prevWifi >= 500)
-  {
-    bool isConnected = WiFi_TryConnect();
-    if (isConnected)
-      TCP_Loop();
-    _prevWifi = millis();
-  }
-  listenSerial();
+  // unsigned long cur = millis();
+  // if (cur - _prevWifi >= 500)
+  // {
+  //   bool isConnected = WiFi_TryConnect();
+  //   if (isConnected)
+  //     TCP_Loop();
+  //   _prevWifi = millis();
+  // }
+  // listenSerial();
 }
