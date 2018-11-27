@@ -1,5 +1,5 @@
 #include <ESP8266WiFi.h>
-#include <EEPROM.h>
+//#include <EEPROM.h> //defined in extensions.h
 #include "extensions.h"
 
 #define e_StrLen 30                          //max-length 30byte
@@ -143,7 +143,7 @@ void setup(void)
   //Serial1.begin(UART_BAUD); //Tx1 or GPIO2; Rx1 is not accessible
 
   //eeprom
-  EEPROM.begin(512);
+  EEPROM_EXT.begin(512);
   DEBUG_EN = EEPROM_EXT.readByte(e_DBG_Addr) != 0;
 
   if (DEBUG_EN)
@@ -155,11 +155,6 @@ void setup(void)
   MY_SN = EEPROM_EXT.readByte(e_SN_Addr);
   SERVER_PORT = EEPROM_EXT.readInt(e_SRVPORT_Addr);
   SERVER_IP_LAST = EEPROM_EXT.readByte(e_SRVIPL_Addr);
-
-  Serial.println("eeprom...");
-  Serial.println(SERVER_PORT);
-  Serial.println(MY_SN);
-  Serial.println("eeprom finish...");
 
   //chip info
   uint32_t chipRealSize = ESP.getFlashChipRealSize();
@@ -392,13 +387,13 @@ void TCP_Loop()
 unsigned long _prevWifi = 0;
 void loop(void)
 {
-  // unsigned long cur = millis();
-  // if (cur - _prevWifi >= 500)
-  // {
-  //   bool isConnected = WiFi_TryConnect();
-  //   if (isConnected)
-  //     TCP_Loop();
-  //   _prevWifi = millis();
-  // }
-  // listenSerial();
+  unsigned long cur = millis();
+  if (cur - _prevWifi >= 500)
+  {
+    bool isConnected = WiFi_TryConnect();
+    if (isConnected)
+      TCP_Loop();
+    _prevWifi = millis();
+  }
+  listenSerial();
 }

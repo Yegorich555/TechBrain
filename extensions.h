@@ -9,12 +9,18 @@
 class EEPROM_EXTClass : public EEPROMClass
 {
 public:
-  byte readByte(int address);
-  int readInt(int address);
-  String readStr(int startAddress, uint8_t length);
-  bool write(int address, uint8_t value);
-  bool write(int address, uint16_t value);
-  bool write(int startAddress, String str, uint8_t maxlength);
+  byte readByte(const int address);
+  int readInt(const int address);
+  String readStr(const int startAddress, const uint8_t length);
+  bool write(const int address, uint8_t value);
+  bool write(const int address, uint16_t value);
+  bool write(const int startAddress, String str, const uint8_t maxlength);
+
+private:
+  void baseWrite(int const address, uint8_t const value)
+  {
+    EEPROMClass::write(address, value);
+  }
 };
 
 extern EEPROM_EXTClass EEPROM_EXT;
