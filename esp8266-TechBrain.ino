@@ -16,6 +16,9 @@ String WIFI_PASS_1 = ""; //stored into eeprom
 #define WIFI_SSID_2 "ESPCfg" // the second wifi point if the first doesn't exist
 #define WIFI_PASS_2 "atmel^8266"
 
+#define MAX_SRV_CLIENTS 2
+WiFiClient serverClients[MAX_SRV_CLIENTS];
+
 uint8_t WIFI_SERVER_PORT = 80;
 uint16_t SERVER_PORT = 1234; //stored into eeprom
 uint8_t SERVER_IP_LAST = 1;  //stored into eeprom //mask server IP = x.x.x.SERVER_IP_LAST
@@ -120,12 +123,14 @@ void onStationConnected(const WiFiEventStationModeConnected &evt)
   DEBUG_MSG("Connected to '" + evt.ssid + "' (" + WiFi.RSSI() + "db)");
 }
 
-IPAddress ipAddress;
 bool isNeedSendIp = true;
+bool isGotIP = false;
+IPAddress ipAddress;
 void onStationGotIp(const WiFiEventStationModeGotIP &evt)
 {
   if (ipAddress != evt.ip)
   {
+    isGotIP = true;
     isNeedSendIp = true;
     ipAddress = evt.ip;
   }
@@ -160,9 +165,8 @@ void setup(void)
   uint32_t chipRealSize = ESP.getFlashChipRealSize();
   uint32_t chipSize = ESP.getFlashChipSize();
   if (chipRealSize < chipSize)
-  {
     Serial.printf("!!!Chip size (%u) is wrong. Real is %u\n", chipSize, chipRealSize);
-  }
+
   DEBUG_MSGF("CpuFreq: %u MHz\n", ESP.getCpuFreqMHz());
   DEBUG_MSGF("Flash speed: %u Hz\n", ESP.getFlashChipSpeed());
   FlashMode_t ideMode = ESP.getFlashChipMode();
@@ -182,6 +186,7 @@ void setup(void)
 
 bool _isWiFiFirst = true;
 bool _isFirstConnect = true;
+uint8_t _lastStatus;
 bool WiFi_TryConnect(void)
 {
   uint8_t status = WiFi.status();
@@ -205,13 +210,17 @@ bool WiFi_TryConnect(void)
       ssid = WIFI_SSID_2;
       pass = WIFI_PASS_2;
     }
-
     WiFi.begin(ssid.c_str(), pass.c_str());
     setDbgLed(dbgLed_Connecting);
     DEBUG_MSG("Connecting to '" + ssid + "'...");
 
     _isWiFiFirst = !_isWiFiFirst;
     _isFirstConnect = false;
+  }
+  else if (_lastStatus != status)
+  {
+    DEBUG_MSG("Connection status: " + String(status));
+    _lastStatus = status;
   }
 
   return false;
@@ -322,22 +331,38 @@ void listenSerial()
         }
       }
     }
-    Serial.println("Error esp_command");
+    Serial.print("Error: ");
+    Serial.println(bytes);
   }
+}
+
+unsigned long checkTimeLast = 0;
+void CheckTime(const String txt = "")
+{
+  if (txt != "")
+  {
+    unsigned long v = millis() - checkTimeLast;
+    if (v > 10) //only if more than 10ms
+    {
+      Serial.print(txt);
+      Serial.println(v);
+    }
+  }
+  checkTimeLast = millis();
 }
 
 bool TCP_SendNumber(IPAddress ipAddr, uint16_t port)
 {
-  DEBUG_MSG("TCP > connecting to '" + ipAddr.toString() + ':' + port + "'...");
+  DEBUG_MSG("TCP. Connecting to '" + ipAddr.toString() + ':' + port + "'...");
 
   WiFiClient client;
   if (!client.connect(ipAddr, port))
   {
-    DEBUG_MSG("TCP > connection failed");
+    DEBUG_MSG("TCP. Connection failed");
     return false;
   }
 
-  client.println("I am (" + String(MY_SN) + ')');
+  client.println("I am (" + String(MY_SN) + ')'); // todo send periodically
   unsigned long timeout = millis();
   while (millis() - timeout < 5000) // timeout 5000ms
   {
@@ -348,23 +373,24 @@ bool TCP_SendNumber(IPAddress ipAddr, uint16_t port)
       {
         isNeedSendIp = false;
         client.stop();
-        DEBUG_MSG("TCP > sending is ok");
+        DEBUG_MSG("TCP. Sending is ok");
         return true;
       }
       else
-        DEBUG_MSG("TCP > sending failed: '" + line + '\'');
+        DEBUG_MSG("TCP. Sending failed: '" + line + '\'');
     }
   }
 
-  DEBUG_MSG("TCP > timeout");
+  DEBUG_MSG("TCP. Timeout");
   client.stop();
   return false;
 }
 
 WiFiServer server(WIFI_SERVER_PORT);
+uint8_t lastServerStatus;
 void TCP_Loop()
 {
-  if (isNeedSendIp)
+  if (isNeedSendIp && isGotIP)
   {
     IPAddress serverIP = IPAddress(ipAddress);
     serverIP[3] = SERVER_IP_LAST;
@@ -380,8 +406,127 @@ void TCP_Loop()
   if (isNeedSendIp)
     return;
 
-  server.begin();
-  DEBUG_MSG("Server started: " + String(server.status()));
+  uint8_t serverStatus = server.status();
+  if (serverStatus == CLOSED)
+  {
+    server.begin();
+    server.setNoDelay(true);
+    if (lastServerStatus != serverStatus)
+    {
+      DEBUG_MSG("TCP. Server started: " + String(serverStatus));
+      lastServerStatus = serverStatus;
+    }
+  }
+
+  // unsigned long cur = millis();
+  // WiFiClient client = server.available();
+  // if (!client)
+  //   return;
+
+  // DEBUG_MSG("TCP. New client: " + client.remoteIP().toString());
+  // delay(500);
+  // if (client.available())
+  // {
+  //   String req = client.readStringUntil('\r');
+  //   Serial.println("TCP. Client sent:" + req);
+  //   client.write("MyAnswer");
+  //   delay(1);
+  // }
+  // DEBUG_MSG("TCP. Client disconnected");
+
+  uint8_t i;
+  //check if there are any new clients
+  if (server.hasClient())
+  {
+    for (i = 0; i < MAX_SRV_CLIENTS; i++)
+    {
+      //find free/disconnected spot
+      if (!serverClients[i] || !serverClients[i].connected())
+      {
+        if (serverClients[i]) //stop if client was disconnected
+          serverClients[i].stop();
+
+        serverClients[i] = server.available();
+        DEBUG_MSG("TCP. New client: " + serverClients[i].remoteIP().toString());
+        break;
+      }
+    }
+    //no free/disconnected spot so reject
+    if (i == MAX_SRV_CLIENTS)
+    {
+      WiFiClient serverClient = server.available();
+      serverClient.stop();
+      DEBUG_MSG("TCP. Max clients - connection rejected: " + serverClient.remoteIP().toString());
+    }
+  }
+
+  //check clients for data
+  for (i = 0; i < MAX_SRV_CLIENTS; i++)
+  {
+    if (serverClients[i] && serverClients[i].connected())
+    {
+
+      // size_t len = serverClients[i].available();
+      // if (!len)
+      //   break;
+      // Serial.print(len);
+      // Serial.println("t2");
+
+      // CheckTime();
+      // char bytes[len + 1];
+      // //serverClients[i].readString(); => takes 5000 seconds!!!
+      // for (unsigned int i = 0; i < len; ++i)
+      // {
+      //   while (!serverClients[i].available())
+      //   {
+      //   }
+      //   Serial.print('.');
+      //   bytes[i] = (char)serverClients[i].read();
+      // }
+
+      // bytes[len] = 0;
+      // String str = String(bytes);
+
+      // CheckTime("t3");
+      // Serial.println("TCP. Client sent:" + str);
+      // serverClients[i].write("MyAnswer");
+
+      //  get data from the telnet client and push it to the UART
+
+      bool readed = false;
+      while (serverClients[i].available())
+      {
+        if (readed == false)
+        {
+          Serial.print("TCP. Client sent: ");
+          readed = true;
+        }
+        Serial.write(serverClients[i].read());
+      }
+      if (readed)
+      {
+        Serial.println();
+        serverClients[i].write("MyAnswer");
+      }
+    }
+  }
+
+  //check UART for data
+  // if (Serial.available())
+  // {
+  //   size_t len = Serial.available();
+  //   uint8_t sbuf[len];
+  //   Serial.readBytes(sbuf, len);
+  //   //push UART data to all connected telnet clients
+  //   for (i = 0; i < MAX_SRV_CLIENTS; i++)
+  //   {
+  //     if (serverClients[i] && serverClients[i].connected())
+  //     {
+  //       serverClients[i].write(sbuf, len);
+  //       delay(1);
+  //     }
+  //   }
+  // }
 }
 
 unsigned long _prevWifi = 0;
@@ -390,10 +535,9 @@ void loop(void)
   unsigned long cur = millis();
   if (cur - _prevWifi >= 500)
   {
-    bool isConnected = WiFi_TryConnect();
-    if (isConnected)
-      TCP_Loop();
+    WiFi_TryConnect();
     _prevWifi = millis();
   }
   listenSerial();
+  TCP_Loop();
 }
