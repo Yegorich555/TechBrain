@@ -237,29 +237,32 @@ void updatePort(const uint8_t num, String strVal)
     analogWrite(num, 1023 * v / 100);
 }
 
-void listenSerial()
+void listenStream(Stream &stream, Stream &outStream)
 {
-  size_t len = Serial.available();
+  size_t len = stream.available();
   if (!len)
     return;
 
   if (len < 5)
   {           //very small parcel
     delay(5); //waiting for the rest part of parcel
-    len = Serial.available();
+    len = stream.available();
   }
 
   char bytes[len + 1];
   for (unsigned int i = 0; i < len; ++i)
   {
-    bytes[i] = (char)Serial.read();
+    while (!stream.available()) //wait available;
+    {
+    }
+    bytes[i] = (char)stream.read();
   }
   bytes[len] = 0;
   String str = String(bytes);
 
   bool ok = str.startsWith(strCmd_Start); //esp_out1(0)
   if (!ok)
-    Serial.print(bytes); //todo send to TCP
+    outStream.print(bytes); //todo send to TCP
   else
   { //getCmd
     str = str.substring(strCmd_Start.length());
@@ -323,16 +326,16 @@ void listenSerial()
               SERVER_IP_LAST = v;
               break;
             }
-            Serial.print("OK: ");
-            Serial.println(bytes);
+            stream.print("OK: ");
+            stream.println(bytes);
 
             return;
           }
         }
       }
     }
-    Serial.print("Error: ");
-    Serial.println(bytes);
+    stream.print("Error: ");
+    stream.println(bytes);
   }
 }
 
@@ -465,79 +468,35 @@ void TCP_Loop()
   {
     if (serverClients[i] && serverClients[i].connected())
     {
-
-      // size_t len = serverClients[i].available();
-      // if (!len)
-      //   break;
-      // Serial.print(len);
-      // Serial.println("t2");
-
-      // CheckTime();
-      // char bytes[len + 1];
-      // //serverClients[i].readString(); => takes 5000 seconds!!!
-      // for (unsigned int i = 0; i < len; ++i)
+      listenStream(serverClients[i], Serial);
+      // bool readed = false;
+      // while (serverClients[i].available())
       // {
-      //   while (!serverClients[i].available())
+      //   if (readed == false)
       //   {
+      //     Serial.print("TCP. Client sent: ");
+      //     readed = true;
       //   }
-      //   Serial.print('.');
-      //   bytes[i] = (char)serverClients[i].read();
+      //   Serial.write(serverClients[i].read());
       // }
-
-      // bytes[len] = 0;
-      // String str = String(bytes);
-
-      // CheckTime("t3");
-      // Serial.println("TCP. Client sent:" + str);
-      // serverClients[i].write("MyAnswer");
-
-      //  get data from the telnet client and push it to the UART
-
-      bool readed = false;
-      while (serverClients[i].available())
-      {
-        if (readed == false)
-        {
-          Serial.print("TCP. Client sent: ");
-          readed = true;
-        }
-        Serial.write(serverClients[i].read());
-      }
-      if (readed)
-      {
-        Serial.println();
-        serverClients[i].write("MyAnswer");
-      }
+      // if (readed)
+      // {
+      //   Serial.println();
+      //   serverClients[i].write("MyAnswer");
+      // }
     }
   }
-
-  //check UART for data
-  // if (Serial.available())
-  // {
-  //   size_t len = Serial.available();
-  //   uint8_t sbuf[len];
-  //   Serial.readBytes(sbuf, len);
-  //   //push UART data to all connected telnet clients
-  //   for (i = 0; i < MAX_SRV_CLIENTS; i++)
-  //   {
-  //     if (serverClients[i] && serverClients[i].connected())
-  //     {
-  //       serverClients[i].write(sbuf, len);
-  //       delay(1);
-  //     }
-  //   }
-  // }
 }
 
 unsigned long _prevWifi = 0;
 void loop(void)
 {
-  unsigned long cur = millis();
-  if (cur - _prevWifi >= 500)
+  if (millis() - _prevWifi >= 500)
   {
     WiFi_TryConnect();
     _prevWifi = millis();
   }
-  listenSerial();
+  
+  listenStream(Serial, Serial);
   TCP_Loop();
 }
