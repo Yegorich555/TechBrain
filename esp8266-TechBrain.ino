@@ -453,11 +453,11 @@ void TCP_Loop()
     if (serverClients[i] && serverClients[i].connected())
     {
       bool isBytesDirect = listenStream(serverClients[i], Serial); //todo what if UART response doesn't have enough time
-      serverClients[i].println("testResponse");                    //todo remove after testing;
-      // serverClients[i].flush();
       if (isBytesDirect) //miss next listening if we have bytes for Serial
       {
         lastClientNum = i;
+        serverClients[i].println("testResponse"); //todo remove after testing;
+        serverClients[i].flush();
         break;
       }
     }
