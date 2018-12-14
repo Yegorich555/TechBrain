@@ -23,9 +23,10 @@ uint8_t WIFI_SERVER_PORT = 80;
 uint16_t SERVER_PORT = 1234; //stored into eeprom
 uint8_t SERVER_IP_LAST = 1;  //stored into eeprom //mask server IP = x.x.x.SERVER_IP_LAST
 uint8_t MY_SN = 0;           //stored into eeprom - SerialNumber
+WiFiServer server(WIFI_SERVER_PORT);
 
-#define UART_BAUD 115200
-bool DEBUG_EN = true; //stored into eeprom
+#define UART_BAUD 115200 //todo store in eeprom and configurate from cmd
+bool DEBUG_EN = true;    //stored into eeprom
 #define DEBUG_MSG(v)   \
   if (DEBUG_EN)        \
   {                    \
@@ -131,10 +132,25 @@ void onStationGotIp(const WiFiEventStationModeGotIP &evt)
   if (ipAddress != evt.ip)
   {
     isGotIP = true;
-    isNeedSendIp = true;
+    isNeedSendIp = true; //todo send if no ping from server.
     ipAddress = evt.ip;
   }
   DEBUG_MSG("IP address: " + ipAddress.toString());
+}
+
+unsigned long checkTimeLast = 0;
+void CheckTime(const String txt = "")
+{
+  if (txt != "")
+  {
+    unsigned long v = millis() - checkTimeLast;
+    //if (v > 10) //only if more than 10ms
+    // {
+    Serial.print(txt);
+    Serial.println(v);
+    // }
+  }
+  checkTimeLast = millis();
 }
 
 void setup(void)
@@ -182,6 +198,9 @@ void setup(void)
   //wifi setup
   stationConnectedHandler = WiFi.onStationModeConnected(&onStationConnected);
   stationGotIPHandler = WiFi.onStationModeGotIP(&onStationGotIp);
+
+  server.setNoDelay(true);
+  server.begin();
 }
 
 bool _isWiFiFirst = true;
@@ -237,13 +256,13 @@ void updatePort(const uint8_t num, String strVal)
     analogWrite(num, 1023 * v / 100);
 }
 
-void listenStream(Stream &stream, Stream &outStream)
+bool listenStream(Stream &stream, Stream &outStream)
 {
   size_t len = stream.available();
   if (!len)
-    return;
+    return false;
 
-  if (len < 5)
+  if (len < 9)
   {           //very small parcel
     delay(5); //waiting for the rest part of parcel
     len = stream.available();
@@ -260,9 +279,13 @@ void listenStream(Stream &stream, Stream &outStream)
   bytes[len] = 0;
   String str = String(bytes);
 
-  bool ok = str.startsWith(strCmd_Start); //esp_out1(0)
-  if (!ok)
-    outStream.print(bytes); //todo send to TCP
+  bool isCmd = str.startsWith(strCmd_Start); //command for esp_out1(0)
+  if (!isCmd)
+  {
+    outStream.print(bytes);
+    delay(1);
+    return true;
+  }
   else
   { //getCmd
     str = str.substring(strCmd_Start.length());
@@ -329,29 +352,15 @@ void listenStream(Stream &stream, Stream &outStream)
             stream.print("OK: ");
             stream.println(bytes);
 
-            return;
+            return false;
           }
         }
       }
     }
     stream.print("Error: ");
     stream.println(bytes);
+    return false;
   }
-}
-
-unsigned long checkTimeLast = 0;
-void CheckTime(const String txt = "")
-{
-  if (txt != "")
-  {
-    unsigned long v = millis() - checkTimeLast;
-    if (v > 10) //only if more than 10ms
-    {
-      Serial.print(txt);
-      Serial.println(v);
-    }
-  }
-  checkTimeLast = millis();
 }
 
 bool TCP_SendNumber(IPAddress ipAddr, uint16_t port)
@@ -371,7 +380,7 @@ bool TCP_SendNumber(IPAddress ipAddr, uint16_t port)
   {
     if (client.available())
     {
-      String line = client.readStringUntil('\r'); //default timeout 1000ms
+      String line = client.readStringUntil('\n'); //todo wait for \r also //default timeout 1000ms
       if (line.equalsIgnoreCase("OK"))
       {
         isNeedSendIp = false;
@@ -389,15 +398,16 @@ bool TCP_SendNumber(IPAddress ipAddr, uint16_t port)
   return false;
 }
 
-WiFiServer server(WIFI_SERVER_PORT);
-uint8_t lastServerStatus;
+uint8_t lastClientNum = 0;
 void TCP_Loop()
 {
+  uint8_t i;
+
   if (isNeedSendIp && isGotIP)
   {
     IPAddress serverIP = IPAddress(ipAddress);
     serverIP[3] = SERVER_IP_LAST;
-    for (uint8_t i = 0; i < 3; ++i) //3 times for different ports
+    for (i = 0; i < 3; ++i) //3 times for different ports
     {
       if (TCP_SendNumber(serverIP, SERVER_PORT + i))
       {
@@ -409,48 +419,22 @@ void TCP_Loop()
   if (isNeedSendIp)
     return;
 
-  uint8_t serverStatus = server.status();
-  if (serverStatus == CLOSED)
-  {
-    server.begin();
-    server.setNoDelay(true);
-    if (lastServerStatus != serverStatus)
-    {
-      DEBUG_MSG("TCP. Server started: " + String(serverStatus));
-      lastServerStatus = serverStatus;
-    }
-  }
-
-  // unsigned long cur = millis();
-  // WiFiClient client = server.available();
-  // if (!client)
-  //   return;
-
-  // DEBUG_MSG("TCP. New client: " + client.remoteIP().toString());
-  // delay(500);
-  // if (client.available())
-  // {
-  //   String req = client.readStringUntil('\r');
-  //   Serial.println("TCP. Client sent:" + req);
-  //   client.write("MyAnswer");
-  //   delay(1);
-  // }
-  // DEBUG_MSG("TCP. Client disconnected");
-
-  uint8_t i;
   //check if there are any new clients
   if (server.hasClient())
   {
-    for (i = 0; i < MAX_SRV_CLIENTS; i++)
+    for (i = 0; i < MAX_SRV_CLIENTS; ++i)
     {
       //find free/disconnected spot
       if (!serverClients[i] || !serverClients[i].connected())
       {
         if (serverClients[i]) //stop if client was disconnected
+        {
           serverClients[i].stop();
+          DEBUG_MSG("TCP. Client is not connected");
+        }
 
         serverClients[i] = server.available();
-        DEBUG_MSG("TCP. New client: " + serverClients[i].remoteIP().toString());
+        DEBUG_MSG("TCP. New client " + String(i) + ":" + serverClients[i].remoteIP().toString());
         break;
       }
     }
@@ -464,26 +448,18 @@ void TCP_Loop()
   }
 
   //check clients for data
-  for (i = 0; i < MAX_SRV_CLIENTS; i++)
+  for (i = 0; i < MAX_SRV_CLIENTS; ++i)
   {
     if (serverClients[i] && serverClients[i].connected())
     {
-      listenStream(serverClients[i], Serial);
-      // bool readed = false;
-      // while (serverClients[i].available())
-      // {
-      //   if (readed == false)
-      //   {
-      //     Serial.print("TCP. Client sent: ");
-      //     readed = true;
-      //   }
-      //   Serial.write(serverClients[i].read());
-      // }
-      // if (readed)
-      // {
-      //   Serial.println();
-      //   serverClients[i].write("MyAnswer");
-      // }
+      bool isBytesDirect = listenStream(serverClients[i], Serial); //todo what if UART response doesn't have enough time
+      serverClients[i].println("testResponse");                    //todo remove after testing;
+      // serverClients[i].flush();
+      if (isBytesDirect) //miss next listening if we have bytes for Serial
+      {
+        lastClientNum = i;
+        break;
+      }
     }
   }
 }
@@ -496,7 +472,9 @@ void loop(void)
     WiFi_TryConnect();
     _prevWifi = millis();
   }
-  
-  listenStream(Serial, Serial);
+
+  listenStream(Serial, serverClients[lastClientNum]);
+  // Serial.flush();
   TCP_Loop();
+  delay(1);
 }
