@@ -200,8 +200,9 @@ void setup(void)
   stationConnectedHandler = WiFi.onStationModeConnected(&onStationConnected);
   stationGotIPHandler = WiFi.onStationModeGotIP(&onStationGotIp);
 
-  server.setNoDelay(true);
+  delay(1);
   server.begin();
+  server.setNoDelay(true);
 }
 
 bool _isWiFiFirst = true;
