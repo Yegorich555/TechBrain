@@ -9,6 +9,7 @@
 #define e_SN_Addr (e_DBG_Addr + 1)           //eeprom address for Serial Number (max 2 bytes)
 #define e_SRVPORT_Addr (e_SN_Addr + 2)       //eeprom address for Server_PORT (2 bytes)
 #define e_SRVIPL_Addr (e_SRVPORT_Addr + 2)   //eeprom address for SERVER_IP_LAST
+#define e_BAUD_Addr (e_SRVIPL_Addr + 1)      //eeprom address for UART baudRate
 
 String WIFI_SSID_1 = ""; //stored into eeprom
 String WIFI_PASS_1 = ""; //stored into eeprom
@@ -25,8 +26,8 @@ uint8_t SERVER_IP_LAST = 1;  //stored into eeprom //mask server IP = x.x.x.SERVE
 uint8_t MY_SN = 0;           //stored into eeprom - SerialNumber
 WiFiServer server(WIFI_SERVER_PORT);
 
-#define UART_BAUD 115200 //todo store in eeprom and configurate from cmd
-bool DEBUG_EN = true;    //stored into eeprom
+unsigned long UART_BAUD = 115200; //stored in eeprom and configurate from cmd
+bool DEBUG_EN = true;             //stored into eeprom
 #define DEBUG_MSG(v)   \
   if (DEBUG_EN)        \
   {                    \
@@ -71,6 +72,7 @@ typedef enum cmd_e
   cmd_port,     //set serverPort,
   cmd_ipl,      //last number of server's IP address
   cmd_ping,     //ping only for testing esp-connection
+  cmd_baud,     //baudRate for UART
 } cmd_e;
 const String strCmd_Start = "esp_"; //Pattern: esp_out1(0)
 const structCmd cmd[] = {
@@ -86,6 +88,7 @@ const structCmd cmd[] = {
     {"port", cmd_port},     //esp_port(portNumber)
     {"ipl", cmd_ipl},       //esp_ipl(ipLastNumber)
     {"ping", cmd_ping},     //cmd_ping()
+    {"baud", cmd_baud},     //cmd_baud(serialBaudRate)
 };
 
 #define strArrLength(v) sizeof(v) / sizeof(v[0])
@@ -167,6 +170,9 @@ void setup(void)
   //eeprom
   EEPROM_EXT.begin(512);
   DEBUG_EN = EEPROM_EXT.readByte(e_DBG_Addr) != 0;
+
+  UART_BAUD = BaudRate::fromNum(EEPROM_EXT.read(e_BAUD_Addr), UART_BAUD);
+  Serial.begin(UART_BAUD);
 
   if (DEBUG_EN)
     delay(500); //delay for debuging in ArduinoIDE
@@ -264,7 +270,7 @@ bool listenStream(Stream &stream, Stream &outStream)
   if (!len)
     return false;
 
-  if (len < 9) //very small parcel
+  if (len < 9) //very small parcel //todo improve logic
   {
     delay(5); //waiting for the rest part of parcel
     len = stream.available();
@@ -316,6 +322,7 @@ bool listenStream(Stream &stream, Stream &outStream)
             str = str.substring(startIndex + 1, endIndex);
             uint8_t v = 0;
             uint16_t v16 = 0;
+            bool isError = false;
             switch (cmd[i].type)
             {
             case cmd_ssid:
@@ -358,13 +365,20 @@ bool listenStream(Stream &stream, Stream &outStream)
               EEPROM_EXT.write(e_SRVIPL_Addr, v);
               SERVER_IP_LAST = v;
               break;
+            case cmd_baud:
+              uint32_t v32 = (uint32_t)str.toInt();
+              if (BaudRate::isValid(v32))
+                EEPROM_EXT.write(e_BAUD_Addr, BaudRate::toNum(v32));
+              else
+                isError = true;
+              break;
             }
-            stream.print("OK: ");
-            stream.println(bytes);
-
-            t_isNeedSendIp.reset();
-
-            return false;
+            if (!isError)
+            {
+              stream.print("OK: ");
+              stream.println(bytes);
+              return false;
+            }
           }
         }
       }
@@ -423,10 +437,8 @@ void TCP_Loop()
   uint8_t i;
 
   if (!isNeedSendIp && t_isNeedSendIp.isPassed(5 * 60 * 1000, true)) //each 5 minutes
-  {
     isNeedSendIp = true;
-    Serial.println("test rst t");
-  }
+
   if (isNeedSendIp && ipAddress != 0)
   {
     if (!_t_sendIpT.isPassed(2000)) // sendNumber each 2 seconds;
@@ -461,7 +473,7 @@ void TCP_Loop()
         }
 
         serverClients[i] = server.available();
-        DEBUG_MSG("TCP. New client:" + serverClients[i].remoteIP().toString());
+        DEBUG_MSG("TCP. New client: " + serverClients[i].remoteIP().toString());
         break;
       }
     }
@@ -479,6 +491,9 @@ void TCP_Loop()
   {
     if (serverClients[i] && serverClients[i].connected())
     {
+      if (serverClients[i].available()) //reset timeLaps if we have bytes
+        t_isNeedSendIp.reset();
+
       bool isBytesDirect = listenStream(serverClients[i], Serial); //todo what if UART response doesn't have enough time
       if (isBytesDirect)                                           //miss next listening if we have bytes for Serial
       {

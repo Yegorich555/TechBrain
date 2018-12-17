@@ -6,12 +6,22 @@ byte EEPROM_EXTClass::readByte(const int address)
   return read(address);
 }
 
-int EEPROM_EXTClass::readInt(const int address)
+uint16_t EEPROM_EXTClass::readInt(const int address)
 {
   byte lowByte = read(address);
   byte highByte = read(address + 1);
 
   return ((lowByte << 0) & 0xFF) + ((highByte << 8) & 0xFF00);
+}
+
+uint32_t EEPROM_EXTClass::readLong(const int address)
+{
+  byte four = read(address);
+  byte three = read(address + 1);
+  byte two = read(address + 2);
+  byte one = read(address + 3);
+
+  return ((four << 0) & 0xFF) + ((three << 8) & 0xFFFF) + ((two << 16) & 0xFFFFFF) + ((one << 24) & 0xFFFFFFFF);
 }
 
 String EEPROM_EXTClass::readStr(int startAddress, const uint8_t length)
@@ -42,6 +52,21 @@ bool EEPROM_EXTClass::write(const int address, uint16_t value)
 
   baseWrite(address, lowByte);
   baseWrite(address + 1, highByte);
+  commit();
+  return true;
+}
+
+bool EEPROM_EXTClass::write(const int address, uint32_t value)
+{
+  byte v1 = ((value >> 0) & 0xFF);
+  byte v2 = ((value >> 8) & 0xFF);
+  byte v3 = ((value >> 16) & 0xFF);
+  byte v4 = ((value >> 24) & 0xFF);
+
+  baseWrite(address, v1);
+  baseWrite(address + 1, v2);
+  baseWrite(address + 2, v3);
+  baseWrite(address + 3, v4);
   commit();
   return true;
 }
