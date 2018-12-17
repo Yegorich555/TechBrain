@@ -65,11 +65,12 @@ typedef enum cmd_e
   cmd_outAll,   //change all outputs
   cmd_ssid,     //set WiFi ssid
   cmd_pass,     //set WiFi password
-  cmd_rst,      // reset chip
-  cmd_dbg,      // turn debug on/off
-  cmd_sn,       // set serial number
-  cmd_port,     // set serverPort,
-  cmd_ipl       //last number of server's IP address
+  cmd_rst,      //reset chip
+  cmd_dbg,      //turn debug on/off
+  cmd_sn,       //set serial number
+  cmd_port,     //set serverPort,
+  cmd_ipl,      //last number of server's IP address
+  cmd_ping,     //ping only for testing esp-connection
 } cmd_e;
 const String strCmd_Start = "esp_"; //Pattern: esp_out1(0)
 const structCmd cmd[] = {
@@ -84,6 +85,7 @@ const structCmd cmd[] = {
     {"sn", cmd_sn},         //esp_sn(serialNumber)
     {"port", cmd_port},     //esp_port(portNumber)
     {"ipl", cmd_ipl},       //esp_ipl(ipLastNumber)
+    {"ping", cmd_ping},     //cmd_ping()
 };
 
 #define strArrLength(v) sizeof(v) / sizeof(v[0])
@@ -125,14 +127,13 @@ void onStationConnected(const WiFiEventStationModeConnected &evt)
 }
 
 bool isNeedSendIp = true;
-bool isGotIP = false;
+unsigned long t_isNeedSendIp;
 IPAddress ipAddress;
 void onStationGotIp(const WiFiEventStationModeGotIP &evt)
 {
   if (ipAddress != evt.ip)
   {
-    isGotIP = true;
-    isNeedSendIp = true; //todo send if no ping from server.
+    isNeedSendIp = true;
     ipAddress = evt.ip;
   }
   DEBUG_MSG("IP address: " + ipAddress.toString());
@@ -262,8 +263,8 @@ bool listenStream(Stream &stream, Stream &outStream)
   if (!len)
     return false;
 
-  if (len < 9)
-  {           //very small parcel
+  if (len < 9) //very small parcel
+  {
     delay(5); //waiting for the rest part of parcel
     len = stream.available();
   }
@@ -271,15 +272,14 @@ bool listenStream(Stream &stream, Stream &outStream)
   char bytes[len + 1];
   for (unsigned int i = 0; i < len; ++i)
   {
-    while (!stream.available()) //wait available;
-    {
-    }
+    while (!stream.available()) //todo timeout //wait available;
+      ;
     bytes[i] = (char)stream.read();
   }
   bytes[len] = 0;
   String str = String(bytes);
 
-  bool isCmd = str.startsWith(strCmd_Start); //command for esp_out1(0)
+  bool isCmd = str.startsWith(strCmd_Start); //command for esp, for example esp_out1(0)
   if (!isCmd)
   {
     outStream.print(bytes);
@@ -301,6 +301,8 @@ bool listenStream(Stream &stream, Stream &outStream)
         {
           if (cmd[i].type == cmd_rst)
             ESP.restart();
+          else if (cmd[i].type == cmd_ping)
+            ;
           else
           {
             str = str.substring(startIndex + 1, endIndex);
@@ -352,6 +354,8 @@ bool listenStream(Stream &stream, Stream &outStream)
             stream.print("OK: ");
             stream.println(bytes);
 
+            t_isNeedSendIp = millis();
+
             return false;
           }
         }
@@ -374,22 +378,27 @@ bool TCP_SendNumber(IPAddress ipAddr, uint16_t port)
     return false;
   }
 
-  client.println("I am (" + String(MY_SN) + ')'); // todo send periodically
-  unsigned long timeout = millis();
-  while (millis() - timeout < 5000) // timeout 5000ms
+  for (uint8_t i = 0; i < 3; ++i) //3 times for repeat
   {
-    if (client.available())
+    client.println("I am (" + String(MY_SN) + ')');
+    unsigned long t = millis();
+    while (millis() - t < 2000) // timeout 2000ms
     {
-      String line = client.readStringUntil('\n'); //todo wait for \r also //default timeout 1000ms
-      if (line.equalsIgnoreCase("OK"))
+      if (client.available())
       {
-        isNeedSendIp = false;
-        client.stop();
-        DEBUG_MSG("TCP. Sending is ok");
-        return true;
+        String line = client.readStringUntil('\n'); //todo wait for \r also //default timeout 1000ms
+        if (line.equalsIgnoreCase("OK"))
+        {
+          isNeedSendIp = false;
+          client.stop();
+          DEBUG_MSG("TCP. Sending ok");
+          return true;
+        }
+        else
+          DEBUG_MSG("TCP. Sending failed: '" + line + '\'');
+
+        client.flush();
       }
-      else
-        DEBUG_MSG("TCP. Sending failed: '" + line + '\'');
     }
   }
 
@@ -399,14 +408,30 @@ bool TCP_SendNumber(IPAddress ipAddr, uint16_t port)
 }
 
 uint8_t lastClientNum = 0;
+unsigned long _t_sendIpT;
 void TCP_Loop()
 {
   uint8_t i;
 
-  if (isNeedSendIp && isGotIP)
+  if (!isNeedSendIp)
   {
-    IPAddress serverIP = IPAddress(ipAddress);
-    serverIP[3] = SERVER_IP_LAST;
+    unsigned long curMillis = millis();
+    if (curMillis - t_isNeedSendIp > 5 * 60 * 60) //each 5 minutes
+    {
+      t_isNeedSendIp = curMillis;
+      isNeedSendIp = true;
+      Serial.println("test rst t");
+    }
+  }
+  if (isNeedSendIp && ipAddress != 0)
+  {
+    unsigned long curMillis = millis();
+    if (_t_sendIpT != 0 && curMillis - _t_sendIpT < 2000) // sendNumber each 2 seconds;
+      return;
+
+    _t_sendIpT = curMillis;
+
+    IPAddress serverIP = IPAddress(ipAddress[0], ipAddress[1], ipAddress[2], SERVER_IP_LAST);
     for (i = 0; i < 3; ++i) //3 times for different ports
     {
       if (TCP_SendNumber(serverIP, SERVER_PORT + i))
@@ -434,7 +459,7 @@ void TCP_Loop()
         }
 
         serverClients[i] = server.available();
-        DEBUG_MSG("TCP. New client " + String(i) + ":" + serverClients[i].remoteIP().toString());
+        DEBUG_MSG("TCP. New client:" + serverClients[i].remoteIP().toString());
         break;
       }
     }
@@ -453,7 +478,7 @@ void TCP_Loop()
     if (serverClients[i] && serverClients[i].connected())
     {
       bool isBytesDirect = listenStream(serverClients[i], Serial); //todo what if UART response doesn't have enough time
-      if (isBytesDirect) //miss next listening if we have bytes for Serial
+      if (isBytesDirect)                                           //miss next listening if we have bytes for Serial
       {
         lastClientNum = i;
         serverClients[i].println("testResponse"); //todo remove after testing;
