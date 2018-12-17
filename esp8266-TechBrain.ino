@@ -416,7 +416,7 @@ void TCP_Loop()
   if (!isNeedSendIp)
   {
     unsigned long curMillis = millis();
-    if (curMillis - t_isNeedSendIp > 5 * 60 * 60) //each 5 minutes
+    if (curMillis - t_isNeedSendIp > 5 * 60 * 1000) //each 5 minutes
     {
       t_isNeedSendIp = curMillis;
       isNeedSendIp = true;
