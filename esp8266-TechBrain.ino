@@ -271,10 +271,17 @@ bool listenStream(Stream &stream, Stream &outStream)
   }
 
   char bytes[len + 1];
+  TimeLaps t;
   for (unsigned int i = 0; i < len; ++i)
   {
-    while (!stream.available()) //todo timeout //wait available;
-      ;
+    while (!stream.available()) //wait available;
+    {
+      if (t.isPassed(1000))
+      {
+        DEBUG_MSG("Error: reading stream timeout");
+        return false;
+      }
+    }
     bytes[i] = (char)stream.read();
   }
   bytes[len] = 0;
