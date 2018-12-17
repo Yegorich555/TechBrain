@@ -1,5 +1,6 @@
 #ifndef EXTENSIONS_H_
 #define EXTENSIONS_H_
+
 #include <EEPROM.h>
 #include <stdint.h>
 #include <string.h>
@@ -24,4 +25,33 @@ private:
 };
 
 extern EEPROM_EXTClass EEPROM_EXT;
+
+class TimeLaps
+{
+public:
+  TimeLaps(void)
+  {
+    _last = 0;
+  }
+
+  bool isPassed(const unsigned int ms, bool ignoreNull = false)
+  {
+    if (ignoreNull && _last == 0)
+      return false;
+    if (_last == 0 || millis() - _last >= ms)
+    {
+      reset();
+      return true;
+    }
+    return false;
+  }
+  void reset(void)
+  {
+    _last = millis();
+  }
+
+protected:
+  unsigned long _last;
+};
+
 #endif /* EXTENSIONS_H_ */

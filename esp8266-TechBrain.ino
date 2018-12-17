@@ -127,7 +127,7 @@ void onStationConnected(const WiFiEventStationModeConnected &evt)
 }
 
 bool isNeedSendIp = true;
-unsigned long t_isNeedSendIp;
+TimeLaps t_isNeedSendIp;
 IPAddress ipAddress;
 void onStationGotIp(const WiFiEventStationModeGotIP &evt)
 {
@@ -354,7 +354,7 @@ bool listenStream(Stream &stream, Stream &outStream)
             stream.print("OK: ");
             stream.println(bytes);
 
-            t_isNeedSendIp = millis();
+            t_isNeedSendIp.reset();
 
             return false;
           }
@@ -378,11 +378,12 @@ bool TCP_SendNumber(IPAddress ipAddr, uint16_t port)
     return false;
   }
 
+  TimeLaps t;
   for (uint8_t i = 0; i < 3; ++i) //3 times for repeat
   {
     client.println("I am (" + String(MY_SN) + ')');
-    unsigned long t = millis();
-    while (millis() - t < 2000) // timeout 2000ms
+    t.reset();
+    while (!t.isPassed(2000, true)) // timeout 2000ms
     {
       if (client.available())
       {
@@ -408,28 +409,20 @@ bool TCP_SendNumber(IPAddress ipAddr, uint16_t port)
 }
 
 uint8_t lastClientNum = 0;
-unsigned long _t_sendIpT;
+TimeLaps _t_sendIpT;
 void TCP_Loop()
 {
   uint8_t i;
 
-  if (!isNeedSendIp)
+  if (!isNeedSendIp && t_isNeedSendIp.isPassed(5 * 60 * 1000, true)) //each 5 minutes
   {
-    unsigned long curMillis = millis();
-    if (curMillis - t_isNeedSendIp > 5 * 60 * 1000) //each 5 minutes
-    {
-      t_isNeedSendIp = curMillis;
-      isNeedSendIp = true;
-      Serial.println("test rst t");
-    }
+    isNeedSendIp = true;
+    Serial.println("test rst t");
   }
   if (isNeedSendIp && ipAddress != 0)
   {
-    unsigned long curMillis = millis();
-    if (_t_sendIpT != 0 && curMillis - _t_sendIpT < 2000) // sendNumber each 2 seconds;
+    if (!_t_sendIpT.isPassed(2000)) // sendNumber each 2 seconds;
       return;
-
-    _t_sendIpT = curMillis;
 
     IPAddress serverIP = IPAddress(ipAddress[0], ipAddress[1], ipAddress[2], SERVER_IP_LAST);
     for (i = 0; i < 3; ++i) //3 times for different ports
@@ -437,6 +430,7 @@ void TCP_Loop()
       if (TCP_SendNumber(serverIP, SERVER_PORT + i))
       {
         isNeedSendIp = false;
+        t_isNeedSendIp.reset();
         break;
       }
     }
@@ -489,13 +483,13 @@ void TCP_Loop()
   }
 }
 
-unsigned long _prevWifi = 0;
+TimeLaps _tWifi;
 void loop(void)
 {
-  if (millis() - _prevWifi >= 500)
+  if (_tWifi.isPassed(500))
   {
     WiFi_TryConnect();
-    _prevWifi = millis();
+    _tWifi.reset();
   }
 
   listenStream(Serial, serverClients[lastClientNum]);
