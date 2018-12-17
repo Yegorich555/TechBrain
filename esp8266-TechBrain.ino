@@ -26,7 +26,7 @@ uint8_t SERVER_IP_LAST = 1;  //stored into eeprom //mask server IP = x.x.x.SERVE
 uint8_t MY_SN = 0;           //stored into eeprom - SerialNumber
 WiFiServer server(WIFI_SERVER_PORT);
 
-unsigned long UART_BAUD = 115200; //stored in eeprom and configurate from cmd
+unsigned long UART_BAUD = 115200; //stored in eeprom
 bool DEBUG_EN = true;             //stored into eeprom
 #define DEBUG_MSG(v)   \
   if (DEBUG_EN)        \
@@ -39,8 +39,9 @@ bool DEBUG_EN = true;             //stored into eeprom
     Serial.printf(__VA_ARGS__); \
   }
 
-#define IO_OUT1 16
-#define IO_OUT2 14
+uint8_t outStates[2];
+#define IO_OUT1 16 //todo redefine
+#define IO_OUT2 14 //todo redefine
 
 //debug led
 #define LED_BUILTIN 2 //by default and also Tx1 by default
@@ -71,9 +72,12 @@ typedef enum cmd_e
   cmd_sn,       //set serial number
   cmd_port,     //set serverPort,
   cmd_ipl,      //last number of server's IP address
-  cmd_ping,     //ping only for testing esp-connection
   cmd_baud,     //baudRate for UART
+
+  cmd_ping, //ping - only for testing esp-connection
+  cmd_state //info about current state
 } cmd_e;
+
 const String strCmd_Start = "esp_"; //Pattern: esp_out1(0)
 const structCmd cmd[] = {
     //str only in lowerCase!!!
@@ -87,8 +91,10 @@ const structCmd cmd[] = {
     {"sn", cmd_sn},         //esp_sn(serialNumber)
     {"port", cmd_port},     //esp_port(portNumber)
     {"ipl", cmd_ipl},       //esp_ipl(ipLastNumber)
-    {"ping", cmd_ping},     //cmd_ping()
     {"baud", cmd_baud},     //cmd_baud(serialBaudRate)
+
+    {"ping", cmd_ping},   //cmd_ping()
+    {"state", cmd_state}, //cmd_state()
 };
 
 #define strArrLength(v) sizeof(v) / sizeof(v[0])
@@ -253,9 +259,9 @@ bool WiFi_TryConnect(void)
   return false;
 }
 
-void updatePort(const uint8_t num, String strVal)
+void updatePort(const uint8_t arrNum, const uint8_t num, uint8_t v)
 {
-  uint8_t v = (uint8_t)strVal.toInt();
+  outStates[arrNum - 1] = v;
   if (v == 100)
     digitalWrite(num, HIGH);
   else if (v == 0)
@@ -266,25 +272,21 @@ void updatePort(const uint8_t num, String strVal)
 
 bool listenStream(Stream &stream, Stream &outStream)
 {
-  size_t len = stream.available();
-  if (!len)
+  if (!stream.available())
     return false;
+  delay(10); //todo improve logic
 
-  if (len < 9) //very small parcel //todo improve logic
-  {
-    delay(5); //waiting for the rest part of parcel
-    len = stream.available();
-  }
-
+  size_t len = stream.available();
   char bytes[len + 1];
   TimeLaps t;
   for (unsigned int i = 0; i < len; ++i)
   {
-    while (!stream.available()) //wait available;
+    while (!stream.available())
     {
-      if (t.isPassed(1000))
+      if (t.isPassed(200))
       {
         DEBUG_MSG("Error: reading stream timeout");
+        stream.flush();
         return false;
       }
     }
@@ -295,98 +297,119 @@ bool listenStream(Stream &stream, Stream &outStream)
 
   bool isCmd = str.startsWith(strCmd_Start); //command for esp, for example esp_out1(0)
   if (!isCmd)
-  {
+  {    
     outStream.print(bytes);
     delay(1);
     return true;
   }
+
+  str = str.substring(strCmd_Start.length());
+  int startIndex = str.indexOf('(');
+  int endIndex = str.indexOf(")\n", startIndex + 1);
+  bool isError = false;
+  if (startIndex == -1 && endIndex == -1)
+    isError = true;
   else
-  { //getCmd
-    str = str.substring(strCmd_Start.length());
-    int startIndex = str.indexOf('(');
-    int endIndex = str.indexOf(")\n", startIndex + 1);
-    if (startIndex != -1 && endIndex != -1)
+  {
+    String cmdStr = str.substring(0, startIndex);
+    cmdStr.toLowerCase();
+    uint8_t i;
+    for (i = 0; i < sizeof(cmd); ++i)
     {
-      String cmdStr = str.substring(0, startIndex);
-      cmdStr.toLowerCase();
-      for (unsigned int i = 0; i < sizeof(cmd); ++i)
+      if (cmdStr == cmd[i].str)
+        break;
+    }
+
+    if (cmd[i].type == cmd_rst)
+      ESP.restart();
+    else if (cmd[i].type == cmd_ping)
+      ;
+    else if (cmd[i].type == cmd_state)
+    {
+      stream.print("State: SN=");
+      stream.print(MY_SN);
+      stream.print(",baud=");
+      stream.print(UART_BAUD);
+      stream.print(",dbg=");
+      stream.print(DEBUG_EN);
+
+      stream.print(",out1=");
+      stream.print(outStates[0]);
+      stream.print(",out2=");
+      stream.println(outStates[1]);
+    }
+    else
+    {
+      str = str.substring(startIndex + 1, endIndex);
+      uint8_t v = 0;
+      uint16_t v16 = 0;
+
+      switch (cmd[i].type)
       {
-        if (cmdStr == cmd[i].str)
-        {
-          if (cmd[i].type == cmd_rst)
-            ESP.restart();
-          else if (cmd[i].type == cmd_ping)
-            ;
-          else
-          {
-            str = str.substring(startIndex + 1, endIndex);
-            uint8_t v = 0;
-            uint16_t v16 = 0;
-            bool isError = false;
-            switch (cmd[i].type)
-            {
-            case cmd_ssid:
-              if (EEPROM_EXT.write(e_SSID_Addr, str, e_StrLen))
-                WIFI_SSID_1 = str;
-              break;
-            case cmd_pass:
-              if (EEPROM_EXT.write(e_PASS_Addr, str, e_StrLen))
-                WIFI_PASS_1 = str;
-              break;
+      case cmd_ssid:
+        if (EEPROM_EXT.write(e_SSID_Addr, str, e_StrLen))
+          WIFI_SSID_1 = str;
+        break;
+      case cmd_pass:
+        if (EEPROM_EXT.write(e_PASS_Addr, str, e_StrLen))
+          WIFI_PASS_1 = str;
+        break;
 
-            case cmd_out1:
-              updatePort(IO_OUT1, str);
-              break;
-            case cmd_out2:
-              updatePort(IO_OUT2, str);
-              break;
-            case cmd_outAll:
-              updatePort(IO_OUT1, str);
-              updatePort(IO_OUT2, str);
-              break;
+      case cmd_out1:
+        v = (uint8_t)str.toInt();
+        updatePort(1, IO_OUT1, v);
+        break;
+      case cmd_out2:
+        v = (uint8_t)str.toInt();
+        updatePort(2, IO_OUT2, v);
+        break;
+      case cmd_outAll:
+        v = (uint8_t)str.toInt();
+        updatePort(1, IO_OUT1, v);
+        updatePort(2, IO_OUT2, v);
+        break;
 
-            case cmd_dbg:
-              v = (uint8_t)str.toInt();
-              EEPROM_EXT.write(e_DBG_Addr, v);
-              DEBUG_EN = v != 0;
-              break;
-            case cmd_sn:
-              v = (uint8_t)str.toInt();
-              EEPROM_EXT.write(e_SN_Addr, v);
-              MY_SN = v;
-              break;
-            case cmd_port:
-              v16 = (uint16_t)str.toInt();
-              EEPROM_EXT.write(e_SRVPORT_Addr, v16);
-              SERVER_PORT = v16;
-              break;
-            case cmd_ipl:
-              v = (uint8_t)str.toInt();
-              EEPROM_EXT.write(e_SRVIPL_Addr, v);
-              SERVER_IP_LAST = v;
-              break;
-            case cmd_baud:
-              uint32_t v32 = (uint32_t)str.toInt();
-              if (BaudRate::isValid(v32))
-                EEPROM_EXT.write(e_BAUD_Addr, BaudRate::toNum(v32));
-              else
-                isError = true;
-              break;
-            }
-            if (!isError)
-            {
-              stream.print("OK: ");
-              stream.println(bytes);
-              return false;
-            }
-          }
-        }
+      case cmd_dbg:
+        v = (uint8_t)str.toInt();
+        EEPROM_EXT.write(e_DBG_Addr, v);
+        DEBUG_EN = v != 0;
+        break;
+      case cmd_sn:
+        v = (uint8_t)str.toInt();
+        EEPROM_EXT.write(e_SN_Addr, v);
+        MY_SN = v;
+        break;
+      case cmd_port:
+        v16 = (uint16_t)str.toInt();
+        EEPROM_EXT.write(e_SRVPORT_Addr, v16);
+        SERVER_PORT = v16;
+        break;
+      case cmd_ipl:
+        v = (uint8_t)str.toInt();
+        EEPROM_EXT.write(e_SRVIPL_Addr, v);
+        SERVER_IP_LAST = v;
+        break;
+      case cmd_baud:
+      {
+        uint32_t v32 = (uint32_t)str.toInt();
+        if (BaudRate::isValid(v32))
+          EEPROM_EXT.write(e_BAUD_Addr, BaudRate::toNum(v32));
+        else
+          isError = true;
+      }
+      break;
+
+      default:
+        isError = true;
+        break;
       }
     }
-    stream.print("Error: ");
-    stream.println(bytes);
-    return false;
   }
+
+  stream.print(isError ? "Error: " : "OK: ");
+  stream.println(bytes);
+
+  return false;
 }
 
 bool TCP_SendNumber(IPAddress ipAddr, uint16_t port)
@@ -499,7 +522,6 @@ void TCP_Loop()
       {
         lastClientNum = i;
         serverClients[i].println("testResponse"); //todo remove after testing;
-        serverClients[i].flush();
         break;
       }
     }
@@ -516,7 +538,6 @@ void loop(void)
   }
 
   listenStream(Serial, serverClients[lastClientNum]);
-  // Serial.flush();
   TCP_Loop();
   delay(1);
 }
