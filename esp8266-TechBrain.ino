@@ -2,6 +2,8 @@
 //#include <EEPROM.h> //defined in extensions.h
 #include "extensions.h"
 
+//todo sleepMode
+
 #define e_StrLen 30                          //max-length 30byte
 #define e_SSID_Addr 0                        //eeprom address for WIFI_SSID_1
 #define e_PASS_Addr (e_SSID_Addr + e_StrLen) //eeprom address for WIFI_PASS_1
@@ -274,40 +276,61 @@ bool listenStream(Stream &stream, Stream &outStream)
 {
   if (!stream.available())
     return false;
-  delay(10); //todo improve logic
 
-  size_t len = stream.available();
-  char bytes[len + 1];
-  TimeLaps t;
-  for (unsigned int i = 0; i < len; ++i)
+  uint8_t i = 0;
+  String str = "";
+  TimeLaps tBetweenBytes;
+  TimeLaps tRead;
+  bool isGetCmd = false;
+  while (1)
   {
-    while (!stream.available())
+    if (stream.available())
     {
-      if (t.isPassed(200))
+      tBetweenBytes.reset();
+
+      char b = (char)stream.read();
+      if (isGetCmd)
       {
-        DEBUG_MSG("Error: reading stream timeout");
-        stream.flush();
+        if (b == '\n' || b == '\r') //wait end of parcel
+          break;
+        else
+          str += b;
+      }
+      else if (b == strCmd_Start[i])
+      { //todo compare with upper case
+        ++i;
+        if (i == strCmd_Start.length())
+        {
+          isGetCmd = true;
+          str = "";
+        }
+        else
+          str += b;
+      }
+      else
+      {
+        outStream.print(str);
+        outStream.print(b);
+        str = "";
+        i = 0;
+      }
+    }
+    else
+    {
+      if (i >= 255 || tBetweenBytes.isPassed(5, true) || tRead.isPassed(100, true)) //wait 5ms between bytes or 100ms total
+      {
+        if (isGetCmd)
+          DEBUG_MSG("Stream. Reading timeout")
+        outStream.print(str);
         return false;
       }
     }
-    bytes[i] = (char)stream.read();
-  }
-  bytes[len] = 0;
-  String str = String(bytes);
-
-  bool isCmd = str.startsWith(strCmd_Start); //command for esp, for example esp_out1(0)
-  if (!isCmd)
-  {    
-    outStream.print(bytes);
-    delay(1);
-    return true;
   }
 
-  str = str.substring(strCmd_Start.length());
   int startIndex = str.indexOf('(');
-  int endIndex = str.indexOf(")\n", startIndex + 1);
+  int endIndex = str.indexOf(")", startIndex + 1);
   bool isError = false;
-  if (startIndex == -1 && endIndex == -1)
+  if (startIndex == -1 || endIndex == -1)
     isError = true;
   else
   {
@@ -405,9 +428,8 @@ bool listenStream(Stream &stream, Stream &outStream)
       }
     }
   }
-
   stream.print(isError ? "Error: " : "OK: ");
-  stream.println(bytes);
+  stream.println(str);
 
   return false;
 }
@@ -533,7 +555,7 @@ void loop(void)
 {
   if (_tWifi.isPassed(500))
   {
-    WiFi_TryConnect();
+    WiFi_TryConnect();    
     _tWifi.reset();
   }
 
