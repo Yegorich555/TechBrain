@@ -6,8 +6,7 @@
                 "C:\\Users\\YegorVM\\AppData\\Local\\Arduino15\\packages\\esp8266\\tools\\**",
                 "C:\\Users\\YegorVM\\AppData\\Local\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\2.4.2\\**",
                 "C:\\Program Files\\Arduino\\tools\\**",
-                "C:\\Program Files\\Arduino\\hardware\\arduino\\avr\\**",
-                "${workspaceFolder}/**"
+                "C:\\Program Files\\Arduino\\hardware\\arduino\\avr\\**"
             ],
             "defines": [
                 "_DEBUG",
@@ -17,7 +16,8 @@
             "browse": {
                 "limitSymbolsToIncludedHeaders": false,
                 "path": [
-                    "c:\\Users\\YegorVM\\AppData\\Local\\Arduino15\\packages\\esp8266\\hardware\\esp8266"
+                    "c:\\Users\\YegorVM\\AppData\\Local\\Arduino15\\packages\\esp8266\\hardware\\esp8266",
+                    "${workspaceFolder}"
                 ]
             },
             "intelliSenseMode": "msvc-x64",

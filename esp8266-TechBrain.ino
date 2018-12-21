@@ -1,35 +1,9 @@
 #include <ESP8266WiFi.h>
+#include "ext_config.h"
 //#include <EEPROM.h> //defined in extensions.h
 #include "extensions.h"
 
 //todo sleepMode
-
-#define e_StrLen 30                          //max-length 30byte
-#define e_SSID_Addr 0                        //eeprom address for WIFI_SSID_1
-#define e_PASS_Addr (e_SSID_Addr + e_StrLen) //eeprom address for WIFI_PASS_1
-#define e_DBG_Addr (e_PASS_Addr + e_StrLen)  //eeprom address for Debug (ON/OFF)
-#define e_SN_Addr (e_DBG_Addr + 1)           //eeprom address for Serial Number (max 2 bytes)
-#define e_SRVPORT_Addr (e_SN_Addr + 2)       //eeprom address for Server_PORT (2 bytes)
-#define e_SRVIPL_Addr (e_SRVPORT_Addr + 2)   //eeprom address for SERVER_IP_LAST
-#define e_BAUD_Addr (e_SRVIPL_Addr + 1)      //eeprom address for UART baudRate
-
-String WIFI_SSID_1 = ""; //stored into eeprom
-String WIFI_PASS_1 = ""; //stored into eeprom
-
-#define WIFI_SSID_2 "ESPCfg" // the second wifi point if the first doesn't exist
-#define WIFI_PASS_2 "atmel^8266"
-
-#define MAX_SRV_CLIENTS 2
-WiFiClient serverClients[MAX_SRV_CLIENTS];
-
-uint8_t WIFI_SERVER_PORT = 80;
-uint16_t SERVER_PORT = 1234; //stored into eeprom
-uint8_t SERVER_IP_LAST = 1;  //stored into eeprom //mask server IP = x.x.x.SERVER_IP_LAST
-uint8_t MY_SN = 0;           //stored into eeprom - SerialNumber
-WiFiServer server(WIFI_SERVER_PORT);
-
-unsigned long UART_BAUD = 115200; //stored in eeprom
-bool DEBUG_EN = true;             //stored into eeprom
 #define DEBUG_MSG(v)   \
   if (DEBUG_EN)        \
   {                    \
@@ -41,12 +15,10 @@ bool DEBUG_EN = true;             //stored into eeprom
     Serial.printf(__VA_ARGS__); \
   }
 
-uint8_t outStates[2];
-#define IO_OUT1 16 //todo redefine
-#define IO_OUT2 14 //todo redefine
+WiFiClient serverClients[MAX_SRV_CLIENTS];
+WiFiServer server(WIFI_SERVER_PORT);
 
 //debug led
-#define LED_BUILTIN 2 //by default and also Tx1 by default
 #include <Ticker.h>
 Ticker flipper;
 typedef enum dbgLed_mode_e
@@ -56,50 +28,7 @@ typedef enum dbgLed_mode_e
   dbgLed_Connected   //long blink
 } dbgLed_mode_e;
 
-//esp commands
-struct structCmd
-{
-  String str;
-  uint8_t type;
-};
-typedef enum cmd_e
-{
-  cmd_out1 = 0, //change output 1
-  cmd_out2,     //change output 2
-  cmd_outAll,   //change all outputs
-  cmd_ssid,     //set WiFi ssid
-  cmd_pass,     //set WiFi password
-  cmd_rst,      //reset chip
-  cmd_dbg,      //turn debug on/off
-  cmd_sn,       //set serial number
-  cmd_port,     //set serverPort,
-  cmd_ipl,      //last number of server's IP address
-  cmd_baud,     //baudRate for UART
-
-  cmd_ping, //ping - only for testing esp-connection
-  cmd_state //info about current state
-} cmd_e;
-
-const String strCmd_Start = "esp_"; //Pattern: esp_out1(0)
-const structCmd cmd[] = {
-    //str only in lowerCase!!!
-    {"out1", cmd_out1},     //from out1(0) to out1(100)
-    {"out2", cmd_out2},     //from out2(0) to out2(100)
-    {"outall", cmd_outAll}, //for all outs
-    {"ssid", cmd_ssid},     //esp_pass(ssidName)
-    {"pass", cmd_pass},     //esp_pass(password)
-    {"rst", cmd_rst},       //esp_rst()
-    {"dbg", cmd_dbg},       //esp_dbg(0) - esp_dbg(1)
-    {"sn", cmd_sn},         //esp_sn(serialNumber)
-    {"port", cmd_port},     //esp_port(portNumber)
-    {"ipl", cmd_ipl},       //esp_ipl(ipLastNumber)
-    {"baud", cmd_baud},     //cmd_baud(serialBaudRate)
-
-    {"ping", cmd_ping},   //cmd_ping()
-    {"state", cmd_state}, //cmd_state()
-};
-
-#define strArrLength(v) sizeof(v) / sizeof(v[0])
+#include "ext_cmd.h"
 
 void flip()
 {
@@ -150,21 +79,6 @@ void onStationGotIp(const WiFiEventStationModeGotIP &evt)
   DEBUG_MSG("IP address: " + ipAddress.toString());
 }
 
-unsigned long checkTimeLast = 0;
-void CheckTime(const String txt = "")
-{
-  if (txt != "")
-  {
-    unsigned long v = millis() - checkTimeLast;
-    //if (v > 10) //only if more than 10ms
-    // {
-    Serial.print(txt);
-    Serial.println(v);
-    // }
-  }
-  checkTimeLast = millis();
-}
-
 void setup(void)
 {
   //debug led
@@ -177,20 +91,13 @@ void setup(void)
 
   //eeprom
   EEPROM_EXT.begin(512);
-  DEBUG_EN = EEPROM_EXT.readByte(e_DBG_Addr) != 0;
+  Cmd.readFromEEPROM();
 
-  UART_BAUD = BaudRate::fromNum(EEPROM_EXT.read(e_BAUD_Addr), UART_BAUD);
   Serial.begin(UART_BAUD);
 
   if (DEBUG_EN)
     delay(500); //delay for debuging in ArduinoIDE
   DEBUG_MSG("\nstarting...");
-
-  WIFI_SSID_1 = EEPROM_EXT.readStr(e_SSID_Addr, e_StrLen);
-  WIFI_PASS_1 = EEPROM_EXT.readStr(e_PASS_Addr, e_StrLen);
-  MY_SN = EEPROM_EXT.readByte(e_SN_Addr);
-  SERVER_PORT = EEPROM_EXT.readInt(e_SRVPORT_Addr);
-  SERVER_IP_LAST = EEPROM_EXT.readByte(e_SRVIPL_Addr);
 
   //chip info
   uint32_t chipRealSize = ESP.getFlashChipRealSize();
@@ -216,7 +123,7 @@ void setup(void)
 
   server.begin();
   server.setNoDelay(true);
-  
+
   WiFi.persistent(false);
 }
 
@@ -260,17 +167,6 @@ bool WiFi_TryConnect(void)
   }
 
   return false;
-}
-
-void updatePort(const uint8_t arrNum, const uint8_t num, uint8_t v)
-{
-  outStates[arrNum - 1] = v;
-  if (v == 100)
-    digitalWrite(num, HIGH);
-  else if (v == 0)
-    digitalWrite(num, LOW);
-  else
-    analogWrite(num, 1023 * v / 100);
 }
 
 bool listenStream(Stream &stream, Stream &outStream)
@@ -328,108 +224,8 @@ bool listenStream(Stream &stream, Stream &outStream)
     }
   }
 
-  int startIndex = str.indexOf('(');
-  int endIndex = str.indexOf(")", startIndex + 1);
-  bool isError = false;
-  if (startIndex == -1 || endIndex == -1)
-    isError = true;
-  else
-  {
-    String cmdStr = str.substring(0, startIndex);
-    cmdStr.toLowerCase();
-    uint8_t i;
-    for (i = 0; i < sizeof(cmd); ++i)
-    {
-      if (cmdStr == cmd[i].str)
-        break;
-    }
-
-    if (cmd[i].type == cmd_rst)
-      ESP.restart();
-    else if (cmd[i].type == cmd_ping)
-      ;
-    else if (cmd[i].type == cmd_state)
-    {
-      stream.print("State: SN=");
-      stream.print(MY_SN);
-      stream.print(",baud=");
-      stream.print(UART_BAUD);
-      stream.print(",dbg=");
-      stream.print(DEBUG_EN);
-
-      stream.print(",out1=");
-      stream.print(outStates[0]);
-      stream.print(",out2=");
-      stream.println(outStates[1]);
-    }
-    else
-    {
-      str = str.substring(startIndex + 1, endIndex);
-      uint8_t v = 0;
-      uint16_t v16 = 0;
-
-      switch (cmd[i].type)
-      {
-      case cmd_ssid:
-        if (EEPROM_EXT.write(e_SSID_Addr, str, e_StrLen))
-          WIFI_SSID_1 = str;
-        break;
-      case cmd_pass:
-        if (EEPROM_EXT.write(e_PASS_Addr, str, e_StrLen))
-          WIFI_PASS_1 = str;
-        break;
-
-      case cmd_out1:
-        v = (uint8_t)str.toInt();
-        updatePort(1, IO_OUT1, v);
-        break;
-      case cmd_out2:
-        v = (uint8_t)str.toInt();
-        updatePort(2, IO_OUT2, v);
-        break;
-      case cmd_outAll:
-        v = (uint8_t)str.toInt();
-        updatePort(1, IO_OUT1, v);
-        updatePort(2, IO_OUT2, v);
-        break;
-
-      case cmd_dbg:
-        v = (uint8_t)str.toInt();
-        EEPROM_EXT.write(e_DBG_Addr, v);
-        DEBUG_EN = v != 0;
-        break;
-      case cmd_sn:
-        v = (uint8_t)str.toInt();
-        EEPROM_EXT.write(e_SN_Addr, v);
-        MY_SN = v;
-        break;
-      case cmd_port:
-        v16 = (uint16_t)str.toInt();
-        EEPROM_EXT.write(e_SRVPORT_Addr, v16);
-        SERVER_PORT = v16;
-        break;
-      case cmd_ipl:
-        v = (uint8_t)str.toInt();
-        EEPROM_EXT.write(e_SRVIPL_Addr, v);
-        SERVER_IP_LAST = v;
-        break;
-      case cmd_baud:
-      {
-        uint32_t v32 = (uint32_t)str.toInt();
-        if (BaudRate::isValid(v32))
-          EEPROM_EXT.write(e_BAUD_Addr, BaudRate::toNum(v32));
-        else
-          isError = true;
-      }
-      break;
-
-      default:
-        isError = true;
-        break;
-      }
-    }
-  }
-  stream.print(isError ? "Error: " : "OK: ");
+  bool isOk = Cmd.execute(str);
+  stream.print(isOk ? "OK: " : "Error: ");
   stream.println(str);
 
   return false;
@@ -556,7 +352,7 @@ void loop(void)
 {
   if (_tWifi.isPassed(500))
   {
-    WiFi_TryConnect();    
+    WiFi_TryConnect();
     _tWifi.reset();
   }
 

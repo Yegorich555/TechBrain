@@ -1,6 +1,7 @@
 #ifndef EXTENSIONS_H_
 #define EXTENSIONS_H_
 
+#include <Arduino.h>
 #include <EEPROM.h>
 #include <stdint.h>
 #include <string.h>
@@ -96,5 +97,7 @@ public:
     return toNum(baud) != 0;
   };
 };
+
+void CheckTime(const String txt);
 
 #endif /* EXTENSIONS_H_ */
