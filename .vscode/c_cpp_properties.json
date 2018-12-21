@@ -1,28 +1,30 @@
 {
-    "configurations": [
-        {
-            "name": "Win32",
-            "includePath": [
-                "C:\\Users\\YegorVM\\AppData\\Local\\Arduino15\\packages\\esp8266\\tools\\**",
-                "C:\\Users\\YegorVM\\AppData\\Local\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\2.4.2\\**",
-                "C:\\Program Files\\Arduino\\tools\\**",
-                "C:\\Program Files\\Arduino\\hardware\\arduino\\avr\\**"
-            ],
-            "defines": [
-                "_DEBUG",
-                "UNICODE",
-                "_UNICODE"
-            ],
-            "browse": {
-                "limitSymbolsToIncludedHeaders": false,
-                "path": [
-                    "c:\\Users\\YegorVM\\AppData\\Local\\Arduino15\\packages\\esp8266\\hardware\\esp8266",
-                    "${workspaceFolder}"
-                ]
-            },
-            "intelliSenseMode": "msvc-x64",
-            "forcedInclude": []
-        }
-    ],
+    "env": {
+        "pathESP8266": "C:\\Users\\Yegor\\AppData\\Local\\Arduino15\\packages\\esp8266",
+        "pathArduino": "C:\\Program Files (x86)\\Arduino"
+    },
+    "configurations": [{
+        "name": "Win32",
+        "includePath": [
+            "${env.pathESP8266}\\tools\\**",
+            "${env.pathESP8266}\\hardware\\esp8266\\2.4.2\\**",
+            "${env.pathArduino}\\tools\\**",
+            "${env.pathArduino}\\hardware\\arduino\\avr\\**"
+        ],
+        "defines": [
+            "_DEBUG",
+            "UNICODE",
+            "_UNICODE"
+        ],
+        "browse": {
+            "limitSymbolsToIncludedHeaders": false,
+            "path": [
+                "${env.pathESP8266}\\hardware\\esp8266",
+                "${workspaceFolder}"
+            ]
+        },
+        "intelliSenseMode": "msvc-x64",
+        "forcedInclude": []
+    }],
     "version": 4
 }
