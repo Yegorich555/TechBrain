@@ -1,7 +1,8 @@
 #include <ESP8266WiFi.h>
-#include "ext_config.h"
 //#include <EEPROM.h> //defined in extensions.h
-#include "extensions.h"
+#include "src/config.h"
+#include "src/extensions.h"
+#include "src/cmd.h"
 
 //todo sleepMode
 #define DEBUG_MSG(v)   \
@@ -27,8 +28,6 @@ typedef enum dbgLed_mode_e
   dbgLed_Connecting, //fast blink
   dbgLed_Connected   //long blink
 } dbgLed_mode_e;
-
-#include "ext_cmd.h"
 
 void flip()
 {
