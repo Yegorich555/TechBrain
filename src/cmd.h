@@ -5,19 +5,18 @@
 #include <stdint.h>
 #include <string.h>
 
-const String strCmd_Start = "esp_";
-
-// struct structCmd
-// {
-//     String strCommand;
-//     bool (*execute)(Stream &stream, String strValue);
-// };
+struct structCmd
+{
+  String strCommand;
+  bool (*execute)(Stream &stream, String strValue);
+};
 
 class CmdClass
 {
-  public:
-    bool execute(String str);
-    void readFromEEPROM();
+public:
+  bool execute(Stream &stream, String str);
+  void readFromEEPROM();
+  const String strStart = "esp_";
 };
 
 extern CmdClass Cmd;

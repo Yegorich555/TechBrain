@@ -4,8 +4,7 @@
 #include "extensions.h"
 
 uint8_t outStates[2];
-
-void updatePort(const uint8_t arrNum, const uint8_t num, String strValue)
+bool updatePort(const uint8_t arrNum, const uint8_t num, String strValue)
 {
     uint8_t v = (uint8_t)strValue.toInt();
     //todo check value
@@ -16,7 +15,15 @@ void updatePort(const uint8_t arrNum, const uint8_t num, String strValue)
         digitalWrite(num, LOW);
     else
         analogWrite(num, 1023 * v / 100);
+
+    return true;
 }
+
+const structCmd cmd[] = {
+    {"out1", [](Stream &stream __attribute__((unused)), String strValue) { return updatePort(1, IO_OUT1, strValue); }},
+    {"out2", [](Stream &stream __attribute__((unused)), String strValue) { return updatePort(2, IO_OUT2, strValue); }},
+    {"outall", [](Stream &stream, String strValue) { return cmd[0].execute(stream, strValue) && cmd[1].execute(stream, strValue); }},
+};
 
 void CmdClass::readFromEEPROM()
 {
@@ -29,36 +36,24 @@ void CmdClass::readFromEEPROM()
     SERVER_IP_LAST = EEPROM_EXT.readByte(e_SRVIPL_Addr);
 }
 
-bool CmdClass::execute(String str)
+bool CmdClass::execute(Stream &stream, String str) //esp_cmd(strVal) pattern
 {
-    return true;
+    int startIndex = str.indexOf('(');
+    int endIndex = str.indexOf(")", startIndex + 1);
+
+    if (startIndex == -1 || endIndex == -1)
+        return true;
+    String cmdStr = str.substring(0, startIndex);
+    cmdStr.toLowerCase();
+
+    for (uint8_t i = 0; i < sizeof(cmd); ++i)
+    {
+        if (cmdStr == cmd[i].strCommand)
+            return !cmd[i].execute(stream, str.substring(startIndex + 1, endIndex));
+    }
 }
 
 CmdClass Cmd;
-// const structCmd cmd[] = {
-//     {"out1", [](Stream &stream __attribute__((unused)), String strValue) { return updatePort(1, IO_OUT1, strValue); }},
-//     {"out2", [](Stream &stream __attribute__((unused)), String strValue) { return updatePort(2, IO_OUT2, strValue); }},
-//     {"outall", [](Stream &stream, String strValue) { return cmd[0].execute(stream, strValue) && cmd[1].execute(stream, strValue); }},
-// };
-
-// int startIndex = str.indexOf('(');
-// int endIndex = str.indexOf(")", startIndex + 1);
-// bool isError = false;
-// if (startIndex == -1 || endIndex == -1)
-//     isError = true;
-// else
-// {
-// String cmdStr = str.substring(0, startIndex);
-// cmdStr.toLowerCase();
-// uint8_t i;
-// for (i = 0; i < sizeof(cmd); ++i)
-// {
-//   if (cmdStr == cmd[i].strCommand)
-//   {
-//     isError = !cmd[i].execute(stream, str.substring(startIndex + 1, endIndex));
-//     break;
-//   }
-// }
 
 // if (cmd[i].type == cmd_rst)
 //   ESP.restart();

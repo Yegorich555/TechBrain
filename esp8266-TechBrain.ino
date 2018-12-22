@@ -85,14 +85,12 @@ void setup(void)
   setDbgLed(dbgLed_ON);
   //analogWriteFreq(new_frequency); 1kHz by default
 
-  Serial.begin(UART_BAUD);
-  //Serial1.begin(UART_BAUD); //Tx1 or GPIO2; Rx1 is not accessible
-
   //eeprom
   EEPROM_EXT.begin(512);
   Cmd.readFromEEPROM();
 
   Serial.begin(UART_BAUD);
+  //Serial1.begin(UART_BAUD); //Tx1 or GPIO2; Rx1 is not accessible
 
   if (DEBUG_EN)
     delay(500); //delay for debuging in ArduinoIDE
@@ -192,10 +190,10 @@ bool listenStream(Stream &stream, Stream &outStream)
         else
           str += b;
       }
-      else if (b == strCmd_Start[i])
+      else if (b == Cmd.strStart[i])
       { //todo compare with upper case
         ++i;
-        if (i == strCmd_Start.length())
+        if (i == Cmd.strStart.length())
         {
           isGetCmd = true;
           str = "";
@@ -223,11 +221,11 @@ bool listenStream(Stream &stream, Stream &outStream)
     }
   }
 
-  bool isOk = Cmd.execute(str);
+  bool isOk = Cmd.execute(stream, str);
   stream.print(isOk ? "OK: " : "Error: ");
   stream.println(str);
 
-  return false;
+  return true; //isBytesDirect = true
 }
 
 bool TCP_SendNumber(IPAddress ipAddr, uint16_t port)
