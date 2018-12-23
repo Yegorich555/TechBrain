@@ -31,7 +31,7 @@ typedef enum dbgLed_mode_e
 
 void flip()
 {
-  digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+  digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //todo decrease to 10% for economy
 }
 
 uint8_t _lastDbgLedMode;
