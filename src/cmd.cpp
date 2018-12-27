@@ -3,6 +3,20 @@
 #include "config.h"
 #include "extensions.h"
 
+template <typename T>
+const T &EEPROM_put(int const address, const T &t)
+{
+    EEPROM_EXT.put(address, t);
+    EEPROM_EXT.commit();
+    return t;
+}
+
+template <typename T>
+T &EEPROM_get(int const address, T &t)
+{
+    return EEPROM_EXT.get(address, t);
+}
+
 uint8_t outStates[2];
 bool updatePort(const uint8_t arrNum, const uint8_t num, String strValue)
 {
@@ -82,42 +96,38 @@ bool goReset(Stream &stream __attribute__((unused)), String strValue __attribute
 
 bool setDebug(Stream &stream __attribute__((unused)), String strValue)
 {
-    uint8_t v = (uint8_t)strValue.toInt();
-    EEPROM_EXT.write(e_DBG_Addr, v); //todo bool
-    DEBUG_EN = v != 0;
+    DEBUG_EN = (uint8_t)strValue.toInt() != 0;
+    EEPROM_put(e_DBG_Addr, DEBUG_EN);
     return true;
 }
 
 bool setSerialNumber(Stream &stream __attribute__((unused)), String strValue)
 {
-    uint8_t v = (uint8_t)strValue.toInt();
-    EEPROM_EXT.write(e_SN_Addr, v);
-    MY_SN = v;
+    MY_SN = (uint8_t)strValue.toInt();
+    EEPROM_put(e_SN_Addr, MY_SN);
     return true;
 }
 
 bool setServerPort(Stream &stream __attribute__((unused)), String strValue)
 {
-    uint16_t v = (uint16_t)strValue.toInt();
-    EEPROM_EXT.write(e_SRVPORT_Addr, v);
-    SERVER_PORT = v;
+    SERVER_PORT = (uint16_t)strValue.toInt();
+    EEPROM_put(e_SRVPORT_Addr, SERVER_PORT);
     return true;
 }
 
 bool setIPLast(Stream &stream __attribute__((unused)), String strValue)
 {
-    uint8_t v = (uint8_t)strValue.toInt();
-    EEPROM_EXT.write(e_SRVIPL_Addr, v);
-    SERVER_IP_LAST = v;
+    SERVER_IP_LAST = (uint8_t)strValue.toInt();
+    EEPROM_put(e_SRVIPL_Addr, SERVER_IP_LAST);
     return true;
 }
 
 bool setSerialBaudRate(Stream &stream __attribute__((unused)), String strValue)
 {
-    uint32_t v32 = (uint32_t)strValue.toInt();
-    if (BaudRate::isValid(v32))
+    uint32_t v = (uint32_t)strValue.toInt();
+    if (BaudRate::isValid(v))
     {
-        EEPROM_EXT.write(e_BAUD_Addr, BaudRate::toNum(v32));
+        EEPROM_put(e_BAUD_Addr, BaudRate::toNum(v));
         return true;
     }
     else
@@ -125,9 +135,9 @@ bool setSerialBaudRate(Stream &stream __attribute__((unused)), String strValue)
 }
 
 const structCmd cmd[] = {
-    {"out1", updatePort1},       //esp_out1(v) - change output 1 from v=0 to 100
-    {"out2", updatePort2},       //esp_out2(v)  - change output 1
-    {"outall", updatePorts},     ///esp_out(v) - change all outputs
+    {"out1", updatePort1},   //esp_out1(v) - change output 1 from v=0 to 100
+    {"out2", updatePort2},   //esp_out2(v)  - change output 1
+    {"outall", updatePorts}, ///esp_out(v) - change all outputs
 
     {"ssid", setWiFiSSID},       //esp_ssid(ssidName) - set WiFi ssid
     {"pass", setWiFiPassword},   //esp_pass(password) - set WiFi password
@@ -144,13 +154,13 @@ const structCmd cmd[] = {
 
 void CmdClass::readFromEEPROM()
 {
-    DEBUG_EN = EEPROM_EXT.readByte(e_DBG_Addr) != 0;
-    UART_BAUD = BaudRate::fromNum(EEPROM_EXT.read(e_BAUD_Addr), UART_BAUD);
+    EEPROM_get(e_DBG_Addr, DEBUG_EN);
+    UART_BAUD = BaudRate::fromNum(EEPROM_get(e_BAUD_Addr, UART_BAUD), UART_BAUD);
     WIFI_SSID_1 = EEPROM_EXT.readStr(e_SSID_Addr, e_StrLen);
     WIFI_PASS_1 = EEPROM_EXT.readStr(e_PASS_Addr, e_StrLen);
-    MY_SN = EEPROM_EXT.readByte(e_SN_Addr);
-    SERVER_PORT = EEPROM_EXT.readInt(e_SRVPORT_Addr);
-    SERVER_IP_LAST = EEPROM_EXT.readByte(e_SRVIPL_Addr);
+    EEPROM_get(e_SN_Addr, MY_SN);
+    EEPROM_get(e_SRVPORT_Addr, SERVER_PORT);
+    EEPROM_get(e_SRVIPL_Addr, SERVER_IP_LAST);
 }
 
 bool CmdClass::execute(Stream &stream, String str) //esp_cmd(strVal) pattern
