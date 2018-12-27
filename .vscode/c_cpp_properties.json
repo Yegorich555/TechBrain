@@ -1,7 +1,7 @@
 {
     "env": {
-        "pathESP8266": "C:\\Users\\Yegor\\AppData\\Local\\Arduino15\\packages\\esp8266",
-        "pathArduino": "C:\\Program Files (x86)\\Arduino"
+        "pathESP8266": "${env.LOCALAPPDATA}\\Arduino15\\packages\\esp8266",
+        "pathArduino": "${env.ProgramFiles(x86)}\\Arduino"
     },
     "configurations": [{
         "name": "Win32",
