@@ -33,7 +33,7 @@ bool updatePorts(Stream &stream __attribute__((unused)), String strValue)
            updatePort2(stream, strValue);
 }
 
-bool setWiFiSSID(Stream &stream, String strValue)
+bool setWiFiSSID(Stream &stream __attribute__((unused)), String strValue)
 {
     if (EEPROM_EXT.write(e_SSID_Addr, strValue, e_StrLen))
     {
@@ -43,7 +43,7 @@ bool setWiFiSSID(Stream &stream, String strValue)
     return false;
 }
 
-bool setWiFiPassword(Stream &stream, String strValue)
+bool setWiFiPassword(Stream &stream __attribute__((unused)), String strValue)
 {
     if (EEPROM_EXT.write(e_PASS_Addr, strValue, e_StrLen))
     {
@@ -128,6 +128,7 @@ const structCmd cmd[] = {
     {"out1", updatePort1},       //esp_out1(v) - change output 1 from v=0 to 100
     {"out2", updatePort2},       //esp_out2(v)  - change output 1
     {"outall", updatePorts},     ///esp_out(v) - change all outputs
+
     {"ssid", setWiFiSSID},       //esp_ssid(ssidName) - set WiFi ssid
     {"pass", setWiFiPassword},   //esp_pass(password) - set WiFi password
     {"rst", goReset},            //esp_rst() - restart Chip
@@ -158,14 +159,14 @@ bool CmdClass::execute(Stream &stream, String str) //esp_cmd(strVal) pattern
     int endIndex = str.indexOf(")", startIndex + 1);
 
     if (startIndex == -1 || endIndex == -1)
-        return true;
+        return false;
     String cmdStr = str.substring(0, startIndex);
     cmdStr.toLowerCase();
 
     for (uint8_t i = 0; i < sizeof(cmd); ++i)
     {
         if (cmdStr == cmd[i].strCommand)
-            return !cmd[i].execute(stream, str.substring(startIndex + 1, endIndex));
+            return cmd[i].execute(stream, str.substring(startIndex + 1, endIndex));
     }
     return false;
 }
