@@ -29,9 +29,17 @@ typedef enum dbgLed_mode_e
   dbgLed_Connected   //long blink
 } dbgLed_mode_e;
 
+#define DBG_LED_ON() analogWrite(LED_BUILTIN, 1000) //max 1023 is off
+#define DBG_LED_OFF() digitalWrite(LED_BUILTIN, HIGH)
+
+bool _flipLatest;
 void flip()
 {
-  digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //todo decrease to 10% for economy
+  _flipLatest = !_flipLatest;
+  if (_flipLatest)
+    DBG_LED_ON();
+  else
+    DBG_LED_OFF();
 }
 
 uint8_t _lastDbgLedMode;
@@ -45,7 +53,7 @@ void setDbgLed(uint8_t dbgLedMode)
   {
   case dbgLed_ON:
     flipper.detach();
-    digitalWrite(LED_BUILTIN, LOW);
+    DBG_LED_ON();
     break;
   case dbgLed_Connecting:
     flipper.attach(0.4, flip);
