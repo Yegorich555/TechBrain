@@ -1,17 +1,17 @@
 #include <ESP8266WiFi.h>
-//#include <EEPROM.h> //defined in extensions.h
+//#include <EEPROM.h>
 #include "src/config.h"
 #include "src/extensions.h"
 #include "src/cmd.h"
 
 //todo sleepMode
-#define DEBUG_MSG(v)   \
-  if (DEBUG_EN)        \
-  {                    \
-    Serial.println(v); \
+#define DEBUG_MSG(v)      \
+  if (cfgEEPROM.DEBUG_EN) \
+  {                       \
+    Serial.println(v);    \
   }
 #define DEBUG_MSGF(...)         \
-  if (DEBUG_EN)                 \
+  if (cfgEEPROM.DEBUG_EN)       \
   {                             \
     Serial.printf(__VA_ARGS__); \
   }
@@ -86,13 +86,13 @@ void setup(void)
   //analogWriteFreq(new_frequency); 1kHz by default
 
   //eeprom
-  EEPROM_EXT.begin(512);
+  EEPROM.begin(512);  
   Cmd.readFromEEPROM();
 
-  Serial.begin(UART_BAUD);
+  Serial.begin(cfgEEPROM.UART_BAUD);
   //Serial1.begin(UART_BAUD); //Tx1 or GPIO2; Rx1 is not accessible
 
-  if (DEBUG_EN)
+  if (cfgEEPROM.DEBUG_EN)
     delay(500); //delay for debuging in ArduinoIDE
   DEBUG_MSG("\nstarting...");
 
@@ -138,21 +138,21 @@ bool WiFi_TryConnect(void)
     if (!_isFirstConnect)
       DEBUG_MSG("ConnectionFailed to '" + WiFi.SSID() + "': " + status);
 
-    String ssid;
-    String pass;
+    const char *ssid;
+    const char *pass;
     if (_isWiFiFirst)
     {
-      ssid = WIFI_SSID_1;
-      pass = WIFI_PASS_1;
+      ssid = (const char *)cfgEEPROM.WIFI_SSID_1;
+      pass = (const char *)cfgEEPROM.WIFI_PASS_1;
     }
     else
     {
       ssid = WIFI_SSID_2;
       pass = WIFI_PASS_2;
     }
-    WiFi.begin(ssid.c_str(), pass.c_str());
+    WiFi.begin(ssid, pass);
     setDbgLed(dbgLed_Connecting);
-    DEBUG_MSG("Connecting to '" + ssid + "'...");
+    DEBUG_MSG("Connecting to '" + String(ssid) + "'...");
 
     _isWiFiFirst = !_isWiFiFirst;
     _isFirstConnect = false;
@@ -242,7 +242,7 @@ bool TCP_SendNumber(IPAddress ipAddr, uint16_t port)
   TimeLaps t;
   for (uint8_t i = 0; i < 3; ++i) //3 times for repeat
   {
-    client.println("I am (" + String(MY_SN) + ')');
+    client.println("I am (" + String(cfgEEPROM.MY_SN) + ')');
     t.reset();
     while (!t.isPassed(2000, true)) // timeout 2000ms
     {
@@ -283,10 +283,10 @@ void TCP_Loop()
     if (!_t_sendIpT.isPassed(2000)) // sendNumber each 2 seconds;
       return;
 
-    IPAddress serverIP = IPAddress(ipAddress[0], ipAddress[1], ipAddress[2], SERVER_IP_LAST);
+    IPAddress serverIP = IPAddress(ipAddress[0], ipAddress[1], ipAddress[2], cfgEEPROM.SERVER_IP_LAST);
     for (i = 0; i < 3; ++i) //3 times for different ports
     {
-      if (TCP_SendNumber(serverIP, SERVER_PORT + i))
+      if (TCP_SendNumber(serverIP, cfgEEPROM.SERVER_PORT + i))
       {
         isNeedSendIp = false;
         t_isNeedSendIp.reset();

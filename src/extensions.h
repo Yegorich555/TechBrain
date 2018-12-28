@@ -2,26 +2,16 @@
 #define EXTENSIONS_H_
 
 #include <Arduino.h>
-#include <EEPROM.h>
 #include <stdint.h>
 #include <string.h>
+#include <EEPROM.h>
 
 #define strArrLength(v) sizeof(v) / sizeof(v[0])
 
 class EEPROM_EXTClass : public EEPROMClass
 {
-public:
-  String readStr(const int startAddress, const uint8_t maxlength);
-  bool write(const int startAddress, String str, const uint8_t maxlength);
-
-private:
-  void baseWrite(int const address, uint8_t const value)
-  {
-    EEPROMClass::write(address, value);
-  }
 };
-
-extern EEPROM_EXTClass EEPROM_EXT;
+extern EEPROM_EXTClass EEPROM_EXT; //this is need for fixing init-duplicate EEPROMClass bug in Arduino
 
 class TimeLaps
 {

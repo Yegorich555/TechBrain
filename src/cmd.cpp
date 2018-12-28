@@ -3,19 +3,11 @@
 #include "config.h"
 #include "extensions.h"
 
-template <typename T>
-const T &EEPROM_put(int const address, const T &t)
-{
-    EEPROM_EXT.put(address, t);
+#define E_PUT_COMMIT(addr, v) \
+    EEPROM_EXT.put(addr, v);  \
     EEPROM_EXT.commit();
-    return t;
-}
 
-template <typename T>
-T &EEPROM_get(int const address, T &t)
-{
-    return EEPROM_EXT.get(address, t);
-}
+#define E_PUT(s, v) E_PUT_COMMIT(offsetof(struct struct_cfgEEPROM, v), s.v)
 
 uint8_t outStates[2];
 bool updatePort(const uint8_t arrNum, const uint8_t num, String strValue)
@@ -47,24 +39,25 @@ bool updatePorts(Stream &stream __attribute__((unused)), String strValue)
            updatePort2(stream, strValue);
 }
 
+#define E_PUT_STR(s, v, str)                                                                                            \
+    size_t len = str.length() + 1;                                                                                      \
+    if (len > sizeof(struct_cfgEEPROM::v))                                                                              \
+    {                                                                                                                   \
+        /*//todo String result = "Err writeEEprom: maxLength " + len + String(" > ") + maxlength; //todo set to debug*/ \
+        return false;                                                                                                   \
+    }                                                                                                                   \
+    str.toCharArray(s.v, len);                                                                                          \
+    E_PUT(s, v);                                                                                                        \
+    return true;
+
 bool setWiFiSSID(Stream &stream __attribute__((unused)), String strValue)
 {
-    if (EEPROM_EXT.write(e_SSID_Addr, strValue, e_StrLen))
-    {
-        WIFI_SSID_1 = strValue;
-        return true;
-    }
-    return false;
+    E_PUT_STR(cfgEEPROM, WIFI_SSID_1, strValue);
 }
 
 bool setWiFiPassword(Stream &stream __attribute__((unused)), String strValue)
 {
-    if (EEPROM_EXT.write(e_PASS_Addr, strValue, e_StrLen))
-    {
-        WIFI_PASS_1 = strValue;
-        return true;
-    }
-    return false;
+    E_PUT_STR(cfgEEPROM, WIFI_PASS_1, strValue);
 }
 
 bool getPing(Stream &stream __attribute__((unused)), String strValue __attribute__((unused)))
@@ -75,11 +68,11 @@ bool getPing(Stream &stream __attribute__((unused)), String strValue __attribute
 bool getState(Stream &stream, String strValue __attribute__((unused)))
 {
     stream.print("State: SN=");
-    stream.print(MY_SN);
+    stream.print(cfgEEPROM.MY_SN);
     stream.print(",baud=");
-    stream.print(UART_BAUD);
+    stream.print(cfgEEPROM.UART_BAUD);
     stream.print(",dbg=");
-    stream.print(DEBUG_EN);
+    stream.print(cfgEEPROM.DEBUG_EN);
 
     stream.print(",out1=");
     stream.print(outStates[0]);
@@ -96,29 +89,29 @@ bool goReset(Stream &stream __attribute__((unused)), String strValue __attribute
 
 bool setDebug(Stream &stream __attribute__((unused)), String strValue)
 {
-    DEBUG_EN = (uint8_t)strValue.toInt() != 0;
-    EEPROM_put(e_DBG_Addr, DEBUG_EN);
+    cfgEEPROM.DEBUG_EN = (uint8_t)strValue.toInt() != 0;
+    E_PUT(cfgEEPROM, DEBUG_EN);
     return true;
 }
 
 bool setSerialNumber(Stream &stream __attribute__((unused)), String strValue)
 {
-    MY_SN = (uint8_t)strValue.toInt();
-    EEPROM_put(e_SN_Addr, MY_SN);
+    cfgEEPROM.MY_SN = (uint8_t)strValue.toInt();
+    E_PUT(cfgEEPROM, MY_SN);
     return true;
 }
 
 bool setServerPort(Stream &stream __attribute__((unused)), String strValue)
 {
-    SERVER_PORT = (uint16_t)strValue.toInt();
-    EEPROM_put(e_SRVPORT_Addr, SERVER_PORT);
+    cfgEEPROM.SERVER_PORT = (uint16_t)strValue.toInt();
+    E_PUT(cfgEEPROM, SERVER_PORT);
     return true;
 }
 
 bool setIPLast(Stream &stream __attribute__((unused)), String strValue)
 {
-    SERVER_IP_LAST = (uint8_t)strValue.toInt();
-    EEPROM_put(e_SRVIPL_Addr, SERVER_IP_LAST);
+    cfgEEPROM.SERVER_IP_LAST = (uint8_t)strValue.toInt();
+    E_PUT(cfgEEPROM, SERVER_IP_LAST);
     return true;
 }
 
@@ -127,7 +120,7 @@ bool setSerialBaudRate(Stream &stream __attribute__((unused)), String strValue)
     uint32_t v = (uint32_t)strValue.toInt();
     if (BaudRate::isValid(v))
     {
-        EEPROM_put(e_BAUD_Addr, BaudRate::toNum(v));
+        E_PUT_COMMIT(offsetof(struct struct_cfgEEPROM, UART_BAUD), v); //only after restart will be applied
         return true;
     }
     else
@@ -154,13 +147,16 @@ const structCmd cmd[] = {
 
 void CmdClass::readFromEEPROM()
 {
-    EEPROM_get(e_DBG_Addr, DEBUG_EN);
-    UART_BAUD = BaudRate::fromNum(EEPROM_get(e_BAUD_Addr, UART_BAUD), UART_BAUD);
-    WIFI_SSID_1 = EEPROM_EXT.readStr(e_SSID_Addr, e_StrLen);
-    WIFI_PASS_1 = EEPROM_EXT.readStr(e_PASS_Addr, e_StrLen);
-    EEPROM_get(e_SN_Addr, MY_SN);
-    EEPROM_get(e_SRVPORT_Addr, SERVER_PORT);
-    EEPROM_get(e_SRVIPL_Addr, SERVER_IP_LAST);
+    if (EEPROM_EXT.read(0) != cfgEEPROM.version)
+    {
+        EEPROM_EXT.get(0, cfgEEPROM);
+        if (!BaudRate::isValid(cfgEEPROM.UART_BAUD))
+            cfgEEPROM.UART_BAUD = UART_BAUD_DEFAULT;
+    }
+    else
+        E_PUT_COMMIT(0, cfgEEPROM);
+
+    // UART_BAUD = BaudRate::fromNum(EEPROM_get(e_BAUD_Addr, UART_BAUD), UART_BAUD);
 }
 
 bool CmdClass::execute(Stream &stream, String str) //esp_cmd(strVal) pattern
