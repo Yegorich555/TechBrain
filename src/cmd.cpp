@@ -147,7 +147,7 @@ const structCmd cmd[] = {
 
 void CmdClass::readFromEEPROM()
 {
-    if (EEPROM_EXT.read(0) != cfgEEPROM.version)
+    if (EEPROM_EXT.read(0) == cfgEEPROM.version)
     {
         EEPROM_EXT.get(0, cfgEEPROM);
         if (!BaudRate::isValid(cfgEEPROM.UART_BAUD))

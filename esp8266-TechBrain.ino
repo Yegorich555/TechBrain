@@ -86,7 +86,7 @@ void setup(void)
   //analogWriteFreq(new_frequency); 1kHz by default
 
   //eeprom
-  EEPROM.begin(512);  
+  EEPROM_EXT.begin(512);
   Cmd.readFromEEPROM();
 
   Serial.begin(cfgEEPROM.UART_BAUD);
