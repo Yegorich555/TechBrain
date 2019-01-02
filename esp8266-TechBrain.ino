@@ -199,8 +199,8 @@ bool listenStream(Stream &stream, Stream &outStream)
         else
           str += b;
       }
-      else if (b == Cmd.strStart[i])
-      { //todo compare with upper case
+      else if (b == Cmd.strStart[i] || b == Cmd.strStartUpper[i])
+      {
         ++i;
         if (i == Cmd.strStart.length())
         {
@@ -225,7 +225,7 @@ bool listenStream(Stream &stream, Stream &outStream)
         if (isGetCmd)
           DEBUG_MSG("Stream. Reading timeout")
         outStream.print(str);
-        return false;
+        return true;
       }
     }
   }
@@ -234,7 +234,7 @@ bool listenStream(Stream &stream, Stream &outStream)
   stream.print(isOk ? "OK: " : "Error: ");
   stream.println(str);
 
-  return true; //isBytesDirect = true
+  return true;
 }
 
 bool TCP_SendNumber(IPAddress ipAddr, uint16_t port)
@@ -257,7 +257,8 @@ bool TCP_SendNumber(IPAddress ipAddr, uint16_t port)
     {
       if (client.available())
       {
-        String line = client.readStringUntil('\n'); //todo wait for \r also //default timeout 1000ms
+        client.setTimeout(500); // timeout 500ms
+        String line = client.readStringUntil('\n');
         if (line.equalsIgnoreCase("OK"))
         {
           isNeedSendIp = false;
@@ -339,18 +340,41 @@ void TCP_Loop()
   {
     if (serverClients[i] && serverClients[i].connected())
     {
-      if (serverClients[i].available()) //reset timeLaps if we have bytes
-        t_isNeedSendIp.reset();
-
-      bool isBytesDirect = listenStream(serverClients[i], Serial); //todo what if UART response doesn't have enough time
-      if (isBytesDirect)                                           //miss next listening if we have bytes for Serial
+      bool isHasBytes = listenStream(serverClients[i], Serial); //todo what if UART response doesn't have enough time
+      if (isHasBytes)                                           //miss next listening if we have bytes for Serial
       {
         lastClientNum = i;
+        t_isNeedSendIp.reset();                   //reset timeLaps if we have bytes
         serverClients[i].println("testResponse"); //todo remove after testing;
         break;
       }
     }
   }
+}
+
+void scan()
+{
+  Serial.println("scan start");
+
+  // WiFi.scanNetworks will return the number of networks found
+  int n = WiFi.scanNetworks();
+  Serial.println("scan done");
+  for (int i = 0; i < n; ++i)
+  {
+    // Print SSID and RSSI for each network found
+    Serial.print(i + 1);
+    Serial.print(": ");
+    Serial.print(WiFi.SSID(i));
+    Serial.print(" (");
+    Serial.print(WiFi.RSSI(i));
+    Serial.print(")");
+    Serial.println((WiFi.encryptionType(i) == ENC_TYPE_NONE) ? " " : "*");
+    delay(1);
+  }
+  Serial.println("");
+
+  // Wait a bit before scanning again
+  delay(1000);
 }
 
 TimeLaps _tWifi;
