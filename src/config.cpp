@@ -10,4 +10,5 @@ struct_cfgEEPROM cfgEEPROM = {
     .SERVER_IP_LAST = 101,
     .WIFI_SSID_1 = {},
     .WIFI_PASS_1 = {},
+    .LSLEEP_EN = true,
 };

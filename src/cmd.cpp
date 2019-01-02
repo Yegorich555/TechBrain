@@ -73,6 +73,8 @@ bool getState(Stream &stream, String strValue __attribute__((unused)))
     stream.print(cfgEEPROM.UART_BAUD);
     stream.print(",dbg=");
     stream.print(cfgEEPROM.DEBUG_EN);
+    stream.print(",lsleep=");
+    stream.print(cfgEEPROM.LSLEEP_EN);
 
     stream.print(",out1=");
     stream.print(outStates[0]);
@@ -127,22 +129,48 @@ bool setSerialBaudRate(Stream &stream __attribute__((unused)), String strValue)
         return false;
 }
 
+bool setSleep(Stream &stream __attribute__((unused)), String strValue)
+{
+    uint16_t v = (uint16_t)strValue.toInt();
+    uint64_t maxDeepSleep = ESP.deepSleepMax() / 1000 / 1000;
+    if (maxDeepSleep >= v)
+        ESP.deepSleep(v * 1000 * 1000);
+    else
+    {
+        stream.print("SleepTime > max");
+        stream.print(Print64(stream, maxDeepSleep));
+        return false;
+    }
+    return true;
+}
+
+#define switchLightSleep() Cmd._wifi.setSleepMode(cfgEEPROM.LSLEEP_EN ? WIFI_MODEM_SLEEP : WIFI_NONE_SLEEP)
+bool setLightSleep(Stream &stream __attribute__((unused)), String strValue)
+{
+    cfgEEPROM.LSLEEP_EN = (uint8_t)strValue.toInt() != 0;
+    E_PUT(cfgEEPROM, LSLEEP_EN);
+    switchLightSleep();
+    return true;
+}
+
 const structCmd cmd[] = {
     {"out1", updatePort1},   //esp_out1(v) - change output 1 from v=0 to 100
-    {"out2", updatePort2},   //esp_out2(v)  - change output 1
+    {"out2", updatePort2},   //esp_out2(v) - change output 2
     {"outall", updatePorts}, ///esp_out(v) - change all outputs
 
     {"ssid", setWiFiSSID},       //esp_ssid(ssidName) - set WiFi ssid
     {"pass", setWiFiPassword},   //esp_pass(password) - set WiFi password
     {"rst", goReset},            //esp_rst() - restart Chip
-    {"dbg", setDebug},           //esp_dbg(1)/esp_dbg(0) - enable/disable debug
+    {"dbg", setDebug},           //esp_dbg(1/0) - enable/disable debug
     {"sn", setSerialNumber},     //esp_sn(serialNumber) - set serial number for Chip
     {"port", setServerPort},     //esp_port(portNumber) - set serverPort for Chip
     {"ipl", setIPLast},          //esp_ipl(ipLastNumber) - set last number of server's IP address
     {"baud", setSerialBaudRate}, //esp_baud(serialBaudRate) - baudRate for UART
 
-    {"ping", getPing},   //esp_ping() - only for testing esp-connection
-    {"state", getState}, //esp_state() - get current info
+    {"sleep", setSleep},       //esp_sleep(seconds) - deepSleep
+    {"lsleep", setLightSleep}, //esp_lsleep(1/0) - enable/disable lightSleep => WIFI_MODEM_SLEEP
+    {"ping", getPing},         //esp_ping() - only for testing esp-connection
+    {"state", getState},       //esp_state() - get current info
 };
 
 void CmdClass::readFromEEPROM()
@@ -156,6 +184,7 @@ void CmdClass::readFromEEPROM()
     else
         E_PUT_COMMIT(0, cfgEEPROM);
 
+    switchLightSleep();
     // UART_BAUD = BaudRate::fromNum(EEPROM_get(e_BAUD_Addr, UART_BAUD), UART_BAUD);
 }
 
@@ -175,6 +204,11 @@ bool CmdClass::execute(Stream &stream, String str) //esp_cmd(strVal) pattern
             return cmd[i].execute(stream, str.substring(startIndex + 1, endIndex));
     }
     return false;
+}
+
+void CmdClass::begin(ESP8266WiFiClass &wifi)
+{
+    _wifi = wifi;
 }
 
 CmdClass Cmd;

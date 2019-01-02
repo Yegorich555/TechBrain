@@ -84,4 +84,6 @@ public:
 
 void CheckTime(const String txt);
 
+size_t Print64(Print &pr, uint64_t number, int base = 10);
+
 #endif /* EXTENSIONS_H_ */

@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <string.h>
 
-#define IO_OUT1 16    //todo redefine
-#define IO_OUT2 14    //todo redefine
+#define IO_OUT1 14
+#define IO_OUT2 12
 #define LED_BUILTIN 2 //by default and also Tx1 by default
 #define UART_BAUD_DEFAULT 115200
 
@@ -19,6 +19,7 @@ typedef struct struct_cfgEEPROM //stored into eeprom
     uint8_t SERVER_IP_LAST; //mask server IP = x.x.x.SERVER_IP_LAST
     char WIFI_SSID_1[30];
     char WIFI_PASS_1[30];
+    bool LSLEEP_EN;
 } struct_cfgEEPROM;
 
 extern struct_cfgEEPROM cfgEEPROM;

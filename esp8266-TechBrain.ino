@@ -4,7 +4,6 @@
 #include "src/extensions.h"
 #include "src/cmd.h"
 
-//todo sleepMode
 #define DEBUG_MSG(v)      \
   if (cfgEEPROM.DEBUG_EN) \
   {                       \
@@ -95,7 +94,8 @@ void setup(void)
 
   //eeprom
   EEPROM_EXT.begin(512);
-  Cmd.readFromEEPROM();
+  Cmd.begin(WiFi);
+  Cmd.readFromEEPROM(); //wifi sleep mode here
 
   Serial.begin(cfgEEPROM.UART_BAUD);
   //Serial1.begin(UART_BAUD); //Tx1 or GPIO2; Rx1 is not accessible
@@ -129,6 +129,7 @@ void setup(void)
   server.begin();
   server.setNoDelay(true);
 
+  WiFi.mode(WIFI_STA);
   WiFi.persistent(false);
 }
 
@@ -364,4 +365,5 @@ void loop(void)
   listenStream(Serial, serverClients[lastClientNum]);
   TCP_Loop();
   delay(1);
+  //  scan();
 }
