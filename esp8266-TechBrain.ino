@@ -113,7 +113,7 @@ void setup(void)
   DEBUG_MSGF("CpuFreq: %u MHz\n", ESP.getCpuFreqMHz());
   DEBUG_MSGF("Flash speed: %u MHz\n", ESP.getFlashChipSpeed()/1000/1000);
   FlashMode_t ideMode = ESP.getFlashChipMode();
-  DEBUG_MSGF("Flash mode:  %s\n", (ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" : ideMode == FM_DOUT ? "DOUT" : "UNKNOWN"));
+  DEBUG_MSGF("Flash mode: %s\n", (ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" : ideMode == FM_DOUT ? "DOUT" : "UNKNOWN"));
 
   //pin setup
   pinMode(IO_OUT1, OUTPUT);

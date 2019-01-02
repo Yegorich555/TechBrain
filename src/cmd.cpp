@@ -86,7 +86,7 @@ bool getState(Stream &stream, String strValue __attribute__((unused)))
 bool goReset(Stream &stream __attribute__((unused)), String strValue __attribute__((unused)))
 {
     //ESP.restart();
-    ESP.deepSleep(100); //100us instead of esp.restart() because of esp.restart first time catch GPIO_0 in 0;
+    ESP.deepSleep(100*1000); //100ms instead of esp.restart() because of esp.restart first time catches GPIO_0 in 0;
     return true;
 }
 
