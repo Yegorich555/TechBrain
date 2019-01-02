@@ -1,156 +1,122 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.IO.Ports;
-using System.Linq;
+using System.IO;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using TechBrain.CustomEventArgs;
 using TechBrain.Entities;
 using TechBrain.Extensions;
-using TechBrain.IO;
-using TechBrain.Drivers.Uart;
-using TechBrain.Services;
 
 namespace TechBrain.Services
 {
-    public class DevServer : IError
+    public class DevServer : IDisposable
     {
-        public ComPort ComPort { get; set; } = new ComPort();
+        public event EventHandler<CommonEventArgs> ErrorLog;
+        public ConcurrentDictionary<int, ESP8266_Device> ESP8266_Devices = new ConcurrentDictionary<int, ESP8266_Device>();
 
-        private static DevServer instance;
-        public static DevServer Instance
+        Thread _thread;
+        Config _config;
+        public DevServer(Config config)
         {
-            get
-            {
-                if (instance == null)
-                    instance = new DevServer();
-                return instance;
-            }
+            _config = config;
         }
 
-        private DevServer()
+        public void Start()
         {
-            ComPort.RepeatQuantity = 2;
-            ComPort.BaudRate = BaudRate._4800;
-            ComPort.PortName = "com3";
-            ComPort.ErrorAppeared += (sender, args) => OnErrorAppeared(args);
+            TcpListen(_config.TcpPort, _config.TcpReceiveTimeout);
         }
 
-        object objLock = new object();
-        public bool SyncTime()
+        void TcpListen(int port, int receiveTimeout)
         {
-            lock (objLock)
-            {
-                try
-                {
-                    var bt = Protocol.GetParcel_SetClock(DateTime.Now);
-                    return ComPort.Write(bt);
-                }
-                catch (Exception ex) { OnErrorAppeared(ex); }
-                return false;
-            }
-        }
+            var server = new TcpListener(IPAddress.Any, port);
+            server.Start();
 
-        public bool SetTime(int dayOfWeek, int hours, int minutes)
-        {
-            lock (objLock)
+            _thread = new Thread(() =>
             {
-                try
-                {
-                    var bt = Protocol.GetParcel_SetClock(dayOfWeek, hours, minutes);
-                    return ComPort.Write(bt);
-                }
-                catch (Exception ex) { OnErrorAppeared(ex); }
-                return false;
-            }
-        }
-
-        public int? GetAddress()
-        {
-            try
-            {
-                var bt = Protocol.GetParcel_GetAddress();
-                var v = (int?)WriteRead(Protocol.CommonAddr, bt, Protocol.ExtractAddress);
-                return v;
-            }
-            catch (Exception ex) { OnErrorAppeared(ex); }
-            return null;
-        }
-
-        public IEnumerable<SensorValue> GetSensorsValues(int addr)
-        {
-            try
-            {
-                var bt = Protocol.GetParcel_GetSensors(addr);
-                IEnumerable<SensorValue> v = WriteRead(addr, bt, Protocol.ExtractSensorValues);
-                return v;
-            }
-            catch (Exception ex) { OnErrorAppeared(ex); }
-            return null;
-        }
-
-        object wrLock = new object();
-        private T WriteRead<T>(int addr, IEnumerable<byte> bt, Func<IList<byte>, T> extractFunc)
-        {
-            lock (wrLock)
-            {
-                ComPort.RepeatQuantity = Protocol.RepeatQuantity;
-
-                if (!ComPort.Write(bt))
-                    return default(T);
-                var sw = new Stopwatch();
-                sw.Start();
                 while (true)
                 {
-                    if (sw.ElapsedMilliseconds > ComPort.ReceiveTimeout * 2)
-                        return default(T);
+                    if (!server.Pending())
+                        break;
 
-                    var parcel = ComPort.Read(Protocol.StartByte, Protocol.EndByte, Protocol.MaxParcelSize);
-                    if (!parcel.Any())
-                        return default(T);
+                    Task.Run(() =>
+                    {
+                        try
+                        {
+                            using (var client = server.AcceptTcpClient())
+                            {
+                                client.ReceiveTimeout = receiveTimeout;
+                                using (var stream = client.GetStream())
+                                {
+                                    using (var reader = new StreamReader(stream, Encoding.ASCII))
+                                    {
+                                        var str = reader.ReadLine();
+                                        var i = str.IndexOf("I am");
+                                        if (i == -1)
+                                        {
+                                            ErrorLog?.Invoke(this, new CommonEventArgs(null, "Wrong parcel: " + str));
+                                            return;
+                                        }
+                                        var IpAddress = ((IPEndPoint)client.Client.RemoteEndPoint).Address;
+                                        Debug.WriteLine($"DevServer. Parcel from TCP ({IpAddress}): '${str}'; ");
 
-                    var result = Protocol.FindParcel(parcel, addr);
-                    if (result != null)
-                        return extractFunc(parcel);
+                                        var num = int.Parse(str.Extract('(', ')', i));
+                                        ESP8266_Devices.AddOrUpdate(num, new ESP8266_Device()
+                                        {
+                                            IpAddress = IpAddress,
+                                            Number = num
+                                        },
+                                        (n, val) =>
+                                        {
+                                            val.IpAddress = IpAddress;
+                                            return val;
+                                        });
+
+                                    }
+                                    byte[] back = Encoding.ASCII.GetBytes("OK\n");
+                                    stream.Write(back, 0, back.Length);
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            ErrorLog?.Invoke(this, new CommonEventArgs(null, "Tcp client exception:" + ex));
+                        }
+                    });
                 }
+            });
+
+            _thread.Name = "DevServerTCP";
+            _thread.Start();
+
+        }
+
+        #region IDisposable Support
+        private bool disposedValue = false; // To detect redundant calls
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                }
+
+                ESP8266_Devices = null;
+                _thread = null;
+                disposedValue = true;
+                _config = null;
             }
         }
 
-        public void SetAddress(int addr, bool forCommonAddr = false)
+        public void Dispose()
         {
-            try
-            {
-                var bt = Protocol.GetParcel_SetAddress(addr, forCommonAddr);
-                ComPort.Write(bt);
-                //todo wait answer
-            }
-            catch (Exception ex) { OnErrorAppeared(ex); }
+            Dispose(true);
         }
-
-        public void ChangeOut(int addr, int number, int value)
-        {
-            try
-            {
-                var bt = Protocol.GetParcel_ChangeOut(addr, number, value);
-                ComPort.Write(bt);
-                //todo wait answer
-            }
-            catch (Exception ex) { OnErrorAppeared(ex); }
-        }
-
-        public void ChangeRepeater(int addr, bool isSetRepeater)
-        {
-            try
-            {
-                var bt = Protocol.GetParcel_ChangeRepeater(addr, isSetRepeater);
-                ComPort.Write(bt);
-                //todo wait answer
-            }
-            catch (Exception ex) { OnErrorAppeared(ex); }
-        }
+        #endregion
 
     }
-
-
 }
-

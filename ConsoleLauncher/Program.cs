@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using TechBrain;
 using TechBrain.CustomEventArgs;
 using TechBrain.Drivers.Uart;
 using TechBrain.Extensions;
@@ -9,77 +10,16 @@ namespace ConsoleLauncher
 {
     class Program
     {
+        DevServer devServer;
+        static Config config = new Config();
         static void Main(string[] args)
         {
-            Console.WriteLine("Initializing devServer...");
-            var devServer = DevServer.Instance;
-            devServer.ErrorAppeared += DevServer_ErrorAppeared;
-            devServer.ComPort.PortName = "com3";
-            Protocol.RepeatQuantity = 1;
-
-            Console.WriteLine("Listening you commands.");
+            var devServer = new DevServer(config);
+            devServer.Start();
             while (true)
             {
 
-                string txt = null;
-                try
-                {
-                    var line = Console.ReadLine();
-                    if (line.ContainsText("syncTime"))
-                    {
-                        devServer.SyncTime();
-                        txt = "Done";
-                    }
-                    else if (line.ContainsText("getAddress"))
-                    {
-                        var str = devServer.GetAddress();
-                        txt = Extender.BuildString("Address: ", str.ToStringNull("null"));
-
-                    }
-                    else if (line.ContainsText("getSensors")) //getSenors(addr)
-                    {
-                        var addr = Convert.ToInt32(line.Extract('(', ')'));
-                        var lst = devServer.GetSensorsValues(addr);                       
-                        txt = "Sensors: " + Extender.BuildStringSep("; ", lst);
-                    }
-                    else if (line.ContainsText("setTime")) //setTime(hh,mm,weekDay)
-                    {
-                        var val = line.Extract('(', ')');
-                        var ind1 = line.IndexOf('(') + 1;
-                        var ind2 = line.IndexOf(',');
-                        var hhStr = line.Substring(ind1, ind2 - ind1);
-                        var ind3 = line.IndexOf(',', ++ind2);
-                        var mmStr = line.Substring(ind2, ind3 - ind2);
-                        var dwStr = line.Substring(++ind3, 1);
-
-                        var hh = Convert.ToInt32(hhStr);
-                        var mm = Convert.ToInt32(mmStr);
-                        var dw = Convert.ToInt32(dwStr);
-                        var str = devServer.SetTime(hh, mm, dw);
-                        txt = Extender.BuildString("SetTime hh:mm:dayWeek => ", hh, ":", mm, "/", dw, " - Ok");
-                    }
-                    else if (line.ContainsText("setAddrress"))
-                    {
-                        var addr = Convert.ToInt32(line.Extract('(', ')'));
-                        devServer.SetAddress(addr);
-                        txt = Extender.BuildString("Setted Address: ", addr);
-                    }
-                    else
-                        txt = "Is not recognized";
-
-                    if (txt != null)
-                    {
-                        Console.WriteLine(txt);
-                    }
-                }
-                catch (Exception ex) { Console.WriteLine(ex.ToString()); }
             }
-        }
-
-        private static void DevServer_ErrorAppeared(object sender, CommonEventArgs e)
-        {
-            Debug.WriteLine(e.Message);
-            Console.WriteLine(e.Message);
         }
     }
 }

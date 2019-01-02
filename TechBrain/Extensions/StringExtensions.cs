@@ -20,16 +20,16 @@ namespace TechBrain.Extensions
 
 
         /// <summary>
-        /// Substring between to chars
+        /// Substring between two chars
         /// </summary>
-        public static string Extract(this string text, char startVal, char endVal)
+        public static string Extract(this string text, char startVal, char endVal, int startIndex = 0)
         {
             if (text == null)
                 return null;
-            var indStart = text.IndexOf(startVal);
+            var indStart = text.IndexOf(startVal, startIndex);
             if (indStart < 0)
                 return null;
-            var indEnd = text.IndexOf(endVal);
+            var indEnd = text.IndexOf(endVal, startIndex);
 
             ++indStart;
 
@@ -59,6 +59,6 @@ namespace TechBrain.Extensions
         public static bool IsEqual(this string text, string value)
         {
             return string.Compare(text, value, true) == 0;
-        }   
+        }
     }
 }

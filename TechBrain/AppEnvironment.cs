@@ -22,5 +22,6 @@ namespace TechBrain
                 return CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
             }
         }
+
     }
 }

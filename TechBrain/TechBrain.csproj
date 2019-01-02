@@ -50,6 +50,8 @@
     <Compile Include="AppEnvironment.cs" />
     <Compile Include="Drivers.Uart\Command.cs" />
     <Compile Include="Drivers.Uart\Protocol.cs" />
+    <Compile Include="Entities\Device.cs" />
+    <Compile Include="Entities\ESP8266_Device.cs" />
     <Compile Include="Entities\SensorValue.cs" />
     <Compile Include="Extensions\CollectionExtensions.cs" />
     <Compile Include="Extensions\Extender.cs" />
