@@ -73,6 +73,14 @@ bool getState(Stream &stream, String strValue __attribute__((unused)))
     stream.print(cfgEEPROM.UART_BAUD);
     stream.print(",dbg=");
     stream.print(cfgEEPROM.DEBUG_EN);
+    stream.print(",ssid=");
+    stream.print(cfgEEPROM.WIFI_SSID_1);
+    stream.print(",pass=");
+    stream.print(cfgEEPROM.WIFI_PASS_1);
+    stream.print(",ipl=");
+    stream.print(cfgEEPROM.SERVER_IP_LAST);
+    stream.print(",port=");
+    stream.print(cfgEEPROM.SERVER_PORT);
     stream.print(",lsleep=");
     stream.print(cfgEEPROM.LSLEEP_EN);
 
@@ -86,7 +94,7 @@ bool getState(Stream &stream, String strValue __attribute__((unused)))
 bool goReset(Stream &stream __attribute__((unused)), String strValue __attribute__((unused)))
 {
     //ESP.restart();
-    ESP.deepSleep(100*1000); //100ms instead of esp.restart() because of esp.restart first time catches GPIO_0 in 0;
+    ESP.deepSleep(100 * 1000); //100ms instead of esp.restart() because of esp.restart first time catches GPIO_0 in 0;
     return true;
 }
 
