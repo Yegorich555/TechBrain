@@ -1,14 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using TechBrain.Communication.Drivers;
 using TechBrain.Entities;
 using TechBrain.Extensions;
 using TechBrain.Services.FLogger;
 
-namespace TechBrain.Drivers.Uart
+namespace TechBrain.Communication.Protocols
 {
-    public class Protocol
+    public class TbProtocol : Protocol
     {
+        byte address;
+        public TbProtocol(IDriver driver, int address) : base(driver)
+        {
+            this.address = address != 0 ? (byte)address : TbProtocol.DefaultAddr;
+        }
+        #region Static
         public static byte StartByte { get; set; } = (byte)'>';
         public static byte CommandByte { get; set; } = (byte)'^';
         public static byte EndByte { get; set; } = 250;
@@ -27,38 +35,38 @@ namespace TechBrain.Drivers.Uart
 
         public static IEnumerable<byte> GetParcel_ChangeRepeater(int addr, bool isSetRepeater, bool answerEn = true)
         {
-            return GetParcelCmd((byte)OwnAddress, (byte)addr, (byte)RepeatQuantity, answerEn, Command.ChangeRepeater((byte)(isSetRepeater ? 1 : 0)));
+            return GetParcelCmd((byte)OwnAddress, (byte)addr, (byte)RepeatQuantity, answerEn, TbCommands.ChangeRepeater((byte)(isSetRepeater ? 1 : 0)));
         }
 
         public static IEnumerable<byte> GetParcel_ChangeOut(int addr, int number, int value, bool answerEn = true)
         {
-            return GetParcelCmd((byte)OwnAddress, (byte)addr, (byte)RepeatQuantity, answerEn, Command.ChangeOutput((byte)number, (byte)value));
+            return GetParcelCmd((byte)OwnAddress, (byte)addr, (byte)RepeatQuantity, answerEn, TbCommands.ChangeOutput((byte)number, (byte)value));
         }
 
         public static IEnumerable<byte> GetParcel_GetSensors(int addr, bool answerEn = true)
         {
-            return GetParcelCmd((byte)OwnAddress, (byte)addr, (byte)RepeatQuantity, answerEn, Command.GetSensors());
+            return GetParcelCmd((byte)OwnAddress, (byte)addr, (byte)RepeatQuantity, answerEn, TbCommands.GetSensors());
         }
 
         public static IEnumerable<byte> GetParcel_GetAddress(bool answerEn = true)
         {
-            return GetParcelCmd((byte)OwnAddress, CommonAddr, (byte)RepeatQuantity, answerEn, Command.GetAddress());
+            return GetParcelCmd((byte)OwnAddress, CommonAddr, (byte)RepeatQuantity, answerEn, TbCommands.GetAddress());
         }
 
         public static IEnumerable<byte> GetParcel_SetClock(DateTime dt, bool answerEn = true)
         {
-            return GetParcelCmd((byte)OwnAddress, CommonAddr, (byte)RepeatQuantity, answerEn, Command.SetClock(dt));
+            return GetParcelCmd((byte)OwnAddress, CommonAddr, (byte)RepeatQuantity, answerEn, TbCommands.SetClock(dt));
         }
 
         public static IEnumerable<byte> GetParcel_SetClock(int dayOfWeek, int hours, int minutes, bool answerEn = true)
         {
-            return GetParcelCmd((byte)OwnAddress, CommonAddr, (byte)RepeatQuantity, answerEn, Command.SetClock(dayOfWeek, hours, minutes));
+            return GetParcelCmd((byte)OwnAddress, CommonAddr, (byte)RepeatQuantity, answerEn, TbCommands.SetClock(dayOfWeek, hours, minutes));
         }
 
 
         public static IEnumerable<byte> GetParcel_SetAddress(int addr, bool forCommonAddr, bool answerEn = true)
         {
-            return GetParcelCmd((byte)OwnAddress, forCommonAddr ? CommonAddr : DefaultAddr, (byte)RepeatQuantity, answerEn, Command.SetAddress((byte)addr));
+            return GetParcelCmd((byte)OwnAddress, forCommonAddr ? CommonAddr : DefaultAddr, (byte)RepeatQuantity, answerEn, TbCommands.SetAddress((byte)addr));
         }
 
         public static byte GetCrc(IEnumerable<byte> str)
@@ -130,7 +138,7 @@ namespace TechBrain.Drivers.Uart
 
         static string FindError(IList<byte> parcel, int checkReturnAddr)
         {
-            
+
             if (parcel == null || parcel.Count() < MinParcelSize)
                 return ($"It's small {parcel?.Count().ToStringNull("0")} < {MinParcelSize}");
 
@@ -149,7 +157,7 @@ namespace TechBrain.Drivers.Uart
                 return ($"Returning address is not match {CommonAnswerAddr}");
 
             var crcParcel = parcel.Skip(i - 1);
-            var crc = GetCrc(crcParcel.Take(crcParcel.Count()-1));
+            var crc = GetCrc(crcParcel.Take(crcParcel.Count() - 1));
             if (parcel[i - 2] != crc)
                 return ($"Crc Error. {parcel[i - 2]} != {crc}");
 
@@ -197,13 +205,13 @@ namespace TechBrain.Drivers.Uart
                         {
                             for (byte setAddr = 0; setAddr < 100; ++setAddr)
                             {
-                                Test_GetCrc(afterGetCrc, fromAddr, toAddr, repeatCount, answerEn, Command.SetAddress(setAddr));
+                                Test_GetCrc(afterGetCrc, fromAddr, toAddr, repeatCount, answerEn, TbCommands.SetAddress(setAddr));
                             }
                             for (byte setOut = 1; setOut < 30; ++setOut)
                             {
                                 for (byte outputValue = 0; outputValue < 100; ++outputValue)
                                 {
-                                    Test_GetCrc(afterGetCrc, fromAddr, toAddr, repeatCount, answerEn, Command.ChangeOutput(setOut, outputValue));
+                                    Test_GetCrc(afterGetCrc, fromAddr, toAddr, repeatCount, answerEn, TbCommands.ChangeOutput(setOut, outputValue));
                                 }
                             }
                             for (byte setD = 1; setD < 8; ++setD)
@@ -212,7 +220,7 @@ namespace TechBrain.Drivers.Uart
                                 {
                                     for (byte setMin = 0; setMin < 60; ++setMin)
                                     {
-                                        Test_GetCrc(afterGetCrc, fromAddr, toAddr, repeatCount, answerEn, Command.SetClock(setD, setHour, setMin));
+                                        Test_GetCrc(afterGetCrc, fromAddr, toAddr, repeatCount, answerEn, TbCommands.SetClock(setD, setHour, setMin));
                                     }
                                 }
                             }
@@ -224,9 +232,45 @@ namespace TechBrain.Drivers.Uart
 
         static void Test_GetCrc(Action<byte, IEnumerable<byte>> afterGetCrc, byte fromAddr, byte toAddr, byte repeatCount, byte answerEnable, IEnumerable<byte> cmd)
         {
-            var parcel = Protocol.GetParcelCmd(fromAddr, toAddr, repeatCount, answerEnable == 1, cmd);
+            var parcel = TbProtocol.GetParcelCmd(fromAddr, toAddr, repeatCount, answerEnable == 1, cmd);
             var crc = GetCrc(parcel);
             afterGetCrc?.Invoke(crc, parcel);
+        }
+
+        #endregion
+
+        T WaitResponse<T>(IDriverClient client, int addr, Func<IList<byte>, T> extractFunc)
+        {
+            while (true)
+            {
+                //todo commonTimeout
+                var parcel = client.Read(TbProtocol.StartByte, TbProtocol.EndByte, TbProtocol.MaxParcelSize);
+                if (!parcel.Any())
+                    return default(T);
+
+                var result = TbProtocol.FindParcel(parcel, addr);
+                if (result != null)
+                    return extractFunc(parcel);
+            }
+        }
+
+        public override bool Ping()
+        {
+            try
+            {
+                using (var client = Driver.OpenClient())
+                {
+                    var bt = TbProtocol.GetParcel_GetAddress();
+                    client.Write(bt);
+                    var addr = WaitResponse(client, TbProtocol.CommonAddr, TbProtocol.ExtractAddress);
+                    return true;
+                }
+            }
+            catch (TimeoutException ex)
+            {
+                Debug.WriteLine(ex);
+                return false;
+            }
         }
     }
 }

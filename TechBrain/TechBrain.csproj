@@ -9,8 +9,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>TechBrain</RootNamespace>
     <AssemblyName>TechBrain</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -45,18 +46,28 @@
   <ItemGroup>
     <Compile Include="AsyncTimer.cs" />
     <Compile Include="AsyncTimerAction.cs" />
+    <Compile Include="Communication\Drivers\TcpDriver.cs" />
+    <Compile Include="Communication\Drivers\IDriverClient.cs" />
+    <Compile Include="Communication\Drivers\TcpDriverClient.cs" />
+    <Compile Include="Communication\Protocols\EspProtocol.cs" />
+    <Compile Include="Config.cs" />
     <Compile Include="CustomEventArgs\CommonEventArgs.cs" />
     <Compile Include="CustomEventArgs\ComPortReceiveArgs.cs" />
     <Compile Include="AppEnvironment.cs" />
-    <Compile Include="Drivers.Uart\Command.cs" />
-    <Compile Include="Drivers.Uart\Protocol.cs" />
+    <Compile Include="Communication\Protocols\TbCommands.cs" />
+    <Compile Include="Communication\Drivers\IDriver.cs" />
+    <Compile Include="Communication\Protocols\Protocol.cs" />
+    <Compile Include="Communication\Protocols\TbProtocol.cs" />
     <Compile Include="Entities\Device.cs" />
-    <Compile Include="Entities\ESP8266_Device.cs" />
+    <Compile Include="Entities\DeviceOutputs.cs" />
+    <Compile Include="Entities\IEntity.cs" />
+    <Compile Include="Entities\Sensor.cs" />
     <Compile Include="Entities\SensorValue.cs" />
     <Compile Include="Extensions\CollectionExtensions.cs" />
     <Compile Include="Extensions\Extender.cs" />
     <Compile Include="Extensions\msg.cs" />
     <Compile Include="Extensions\ObjectExtensions.cs" />
+    <Compile Include="Extensions\StreamSocketExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="IErrorEvent.cs" />
     <Compile Include="IO\ComPort.cs" />

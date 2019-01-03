@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace TechBrain.Drivers.Uart
+namespace TechBrain.Communication.Protocols
 {
-    public enum CmdType : byte
+    public enum AvrTbCmdType : byte
     {
         setAddress = (byte)'a',
         getAddress = (byte)'b',
@@ -14,7 +14,7 @@ namespace TechBrain.Drivers.Uart
         setRepeats = (byte)'u'
     }
 
-    public class Command
+    public class TbCommands
     {
         public static IEnumerable<byte> SetClock(DateTime dt)
         {
@@ -26,7 +26,7 @@ namespace TechBrain.Drivers.Uart
 
         public static IEnumerable<byte> SetClock(int dayOfWeek, int hours, int minutes)
         {
-            yield return (byte)CmdType.setClock;
+            yield return (byte)AvrTbCmdType.setClock;
             yield return (byte)dayOfWeek;
             yield return (byte)hours;
             yield return (byte)minutes;
@@ -35,31 +35,31 @@ namespace TechBrain.Drivers.Uart
 
         public static IEnumerable<byte> SetAddress(byte address)
         {
-            yield return (byte)CmdType.setAddress;
+            yield return (byte)AvrTbCmdType.setAddress;
             yield return address;
         }
 
         public static IEnumerable<byte> ChangeOutput(byte number, byte value)
         {
-            yield return (byte)CmdType.changeOut;
+            yield return (byte)AvrTbCmdType.changeOut;
             yield return number;
             yield return value;
         }
 
         internal static IEnumerable<byte> GetAddress()
         {
-            yield return (byte)CmdType.getAddress;
+            yield return (byte)AvrTbCmdType.getAddress;
         }
 
         public static IEnumerable<byte> ChangeRepeater(byte value)
         {
-            yield return (byte)CmdType.changeRepeater;
+            yield return (byte)AvrTbCmdType.changeRepeater;
             yield return value;
         }
 
         public static IEnumerable<byte> GetSensors()
         {
-            yield return (byte)CmdType.getSensors;
+            yield return (byte)AvrTbCmdType.getSensors;
         }
     }
 }

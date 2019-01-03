@@ -1,25 +1,92 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Net;
+using TechBrain.Communication.Drivers;
+using TechBrain.Communication.Protocols;
 
 namespace TechBrain.Entities
 {
-    public class Device
+    public enum DeviceTypes
     {
-        public int Number { get; set; }
+        None,
+        AVR,
+        ESP,
+        ESP_AVR
+    }
+    public class Device : IEntity
+    {
+        public int SerialNumber { get; set; }
+        public string Name { get; set; }
+        public string Description { get; set; }
 
-        public virtual void ChangeOuts(int value)
-        { }
-        public virtual void ChangeOut(int num, int value)
-        { }
+        bool isOnline;
+        public bool IsOnline
+        {
+            get { return isOnline; }
+            set
+            {
+                isOnline = value;
+                if (isOnline)
+                    IsOnlineDate = DateTime.Now;
+            }
 
-        public virtual void GetSensors()
-        { }
+        }
 
-        public virtual void SyncTime()
-        { }
-        // public Device Destination { get; set; }
+        public DateTime IsOnlineDate { get; private set; }
+        public IList<Sensor> Sensors { get; set; }
+        public IList<DeviceOutput> Outputs { get; set; }
+        public virtual bool HasTime { get; set; }
+        public virtual bool HasSleep { get; set; } = true;
+        public virtual bool HasResponse { get; set; } = true;
+
+        #region ESP
+        public int? IpPort { get; set; } = 80; //todo config
+        public IPAddress IpAddress { get; set; }
+        #endregion
+
+        public DeviceTypes Type { get; set; }
+        public IDriver Driver
+        {
+            get
+            {
+                switch (Type)
+                {
+                    case DeviceTypes.None:
+                        throw new NullReferenceException("Device type is not defined");
+                    case DeviceTypes.AVR:
+                        break;
+                    case DeviceTypes.ESP:
+                    case DeviceTypes.ESP_AVR:
+                        return new TcpDriver(IpAddress, IpPort);
+                }
+                throw new NotImplementedException();
+            }
+        }
+        public Protocol Protocol
+        {
+            get
+            {
+                switch (Type)
+                {
+                    case DeviceTypes.None:
+                        throw new NullReferenceException("Device type is not defined");
+                    case DeviceTypes.AVR:
+                    case DeviceTypes.ESP_AVR:
+                        return new TbProtocol(Driver, SerialNumber);
+                    case DeviceTypes.ESP:
+                        return new EspProtocol(Driver);
+                }
+                throw new NotImplementedException();
+            }
+        }
+
+        public bool Ping()
+        {
+            if (!HasResponse)
+                return false;
+            IsOnline = Protocol.Ping();
+            return IsOnline;
+        }
+
     }
 }

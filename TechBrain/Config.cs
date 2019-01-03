@@ -10,6 +10,7 @@ namespace TechBrain
     {
         public int TcpPort { get; private set; } = 1234;
         public int TcpReceiveTimeout { get; private set; } = 500;
+        public int TcpEspPort { get; private set; } = 80;
         public string ComPort { get; private set; } = "COM3";
     }
 }

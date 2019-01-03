@@ -26,7 +26,7 @@ namespace TechBrain.Entities
         { }
 
         public int? Divider { get; private set; } = 10;// for x dig after point
-        public float? Value { get { return (float?)SourceValue / Divider; } } 
+        public float? Value { get { return (float?)SourceValue / Divider; } }
         public int? SourceValue { get; private set; }
         public DateTime DateTime { get; private set; }
 
@@ -34,7 +34,7 @@ namespace TechBrain.Entities
         {
             if (SourceValue == null)
                 return "null";
-            return Extender.BuildString(Value);
+            return Extender.BuildStringSep(".", SourceValue, Divider);
         }
     }
 }

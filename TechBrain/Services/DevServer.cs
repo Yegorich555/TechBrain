@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -16,82 +18,106 @@ namespace TechBrain.Services
     public class DevServer : IDisposable
     {
         public event EventHandler<CommonEventArgs> ErrorLog;
-        public ConcurrentDictionary<int, ESP8266_Device> ESP8266_Devices = new ConcurrentDictionary<int, ESP8266_Device>();
+        public ConcurrentBag<Device> Devices;
 
         Thread _thread;
         Config _config;
-        public DevServer(Config config)
+        public DevServer(Config config, IList<Device> devices)
         {
             _config = config;
+            Devices = new ConcurrentBag<Device>(devices);
         }
+
+        public volatile static bool LoopEnd;
 
         public void Start()
         {
             TcpListen(_config.TcpPort, _config.TcpReceiveTimeout);
         }
 
+
         void TcpListen(int port, int receiveTimeout)
         {
-            var server = new TcpListener(IPAddress.Any, port);
-            server.Start();
+            LoopEnd = true;
 
             _thread = new Thread(() =>
             {
-                while (true)
-                {
-                    if (!server.Pending())
-                        break;
-
-                    Task.Run(() =>
-                    {
-                        try
-                        {
-                            using (var client = server.AcceptTcpClient())
-                            {
-                                client.ReceiveTimeout = receiveTimeout;
-                                using (var stream = client.GetStream())
-                                {
-                                    using (var reader = new StreamReader(stream, Encoding.ASCII))
-                                    {
-                                        var str = reader.ReadLine();
-                                        var i = str.IndexOf("I am");
-                                        if (i == -1)
-                                        {
-                                            ErrorLog?.Invoke(this, new CommonEventArgs(null, "Wrong parcel: " + str));
-                                            return;
-                                        }
-                                        var IpAddress = ((IPEndPoint)client.Client.RemoteEndPoint).Address;
-                                        Debug.WriteLine($"DevServer. Parcel from TCP ({IpAddress}): '${str}'; ");
-
-                                        var num = int.Parse(str.Extract('(', ')', i));
-                                        ESP8266_Devices.AddOrUpdate(num, new ESP8266_Device()
-                                        {
-                                            IpAddress = IpAddress,
-                                            Number = num
-                                        },
-                                        (n, val) =>
-                                        {
-                                            val.IpAddress = IpAddress;
-                                            return val;
-                                        });
-
-                                    }
-                                    byte[] back = Encoding.ASCII.GetBytes("OK\n");
-                                    stream.Write(back, 0, back.Length);
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            ErrorLog?.Invoke(this, new CommonEventArgs(null, "Tcp client exception:" + ex));
-                        }
-                    });
-                }
+                LoopEnd = false;
+                var server = new TcpListener(IPAddress.Any, port);
+                server.Start();
+                Loop(server, receiveTimeout);
+                server.Stop();
             });
 
             _thread.Name = "DevServerTCP";
             _thread.Start();
 
+        }
+
+        void Loop(TcpListener server, int receiveTimeout)
+        {
+            while (true && !LoopEnd)
+            {
+                if (!server.Pending())
+                    continue;
+
+                Task.Run(() =>
+                {
+                    try
+                    {
+                        using (var client = server.AcceptTcpClient())
+                        {
+                            client.ReceiveTimeout = receiveTimeout;
+                            using (var stream = client.GetStream())
+                            {
+                                using (var reader = new StreamReader(stream, Encoding.ASCII))
+                                {
+                                    var str = reader.ReadLine();
+                                    var i = str.IndexOf("I am");
+                                    if (i == -1)
+                                    {
+                                        ErrorLog?.Invoke(this, new CommonEventArgs(null, "Wrong parcel: " + str));
+                                        return;
+                                    }
+                                    var IpAddress = ((IPEndPoint)client.Client.RemoteEndPoint).Address;
+                                    Debug.WriteLine($"DevServer. Parcel from TCP ({IpAddress}): '${str}'; ");
+
+                                    var num = int.Parse(str.Extract('(', ')', i));
+                                    AddOrUpdate(IpAddress, num);
+                                }
+                                byte[] back = Encoding.ASCII.GetBytes("OK\n");
+                                stream.Write(back, 0, back.Length);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        ErrorLog?.Invoke(this, new CommonEventArgs(null, "Tcp client exception:" + ex));
+                    }
+                });
+            }
+        }
+
+        void AddOrUpdate(IPAddress IpAddress, int SerialNumber)
+        {
+            var item = Devices.FirstOrDefault(v => v.SerialNumber == SerialNumber);
+            if (item != null)
+            {
+                item.IpAddress = IpAddress;
+                item.IsOnline = true;
+            }
+            else
+            {
+                Devices.Add(new Device()
+                {
+                    Type = DeviceTypes.ESP,
+                    HasResponse = true,
+                    HasSleep = true,
+                    IpAddress = IpAddress,
+                    SerialNumber = SerialNumber,
+                    IsOnline = true,
+                });
+            }
         }
 
         #region IDisposable Support
@@ -104,8 +130,8 @@ namespace TechBrain.Services
                 if (disposing)
                 {
                 }
-
-                ESP8266_Devices = null;
+                LoopEnd = true;
+                Devices = null;
                 _thread = null;
                 disposedValue = true;
                 _config = null;
