@@ -43,7 +43,7 @@ namespace TechBrain.Services
             _thread = new Thread(() =>
             {
                 LoopEnd = false;
-                var server = new TcpListener(IPAddress.Any, port);
+                var server = new TcpListener(IPAddress.Any, port); //todo port+1, port+2 if this is busy
                 server.Start();
                 Loop(server, receiveTimeout);
                 server.Stop();
@@ -70,21 +70,19 @@ namespace TechBrain.Services
                             client.ReceiveTimeout = receiveTimeout;
                             using (var stream = client.GetStream())
                             {
-                                using (var reader = new StreamReader(stream, Encoding.ASCII))
+                                var str = client.ReadLine();
+                                var i = str.IndexOf("I am");
+                                if (i == -1)
                                 {
-                                    var str = reader.ReadLine();
-                                    var i = str.IndexOf("I am");
-                                    if (i == -1)
-                                    {
-                                        ErrorLog?.Invoke(this, new CommonEventArgs(null, "Wrong parcel: " + str));
-                                        return;
-                                    }
-                                    var IpAddress = ((IPEndPoint)client.Client.RemoteEndPoint).Address;
-                                    Debug.WriteLine($"DevServer. Parcel from TCP ({IpAddress}): '${str}'; ");
-
-                                    var num = int.Parse(str.Extract('(', ')', i));
-                                    AddOrUpdate(IpAddress, num);
+                                    ErrorLog?.Invoke(this, new CommonEventArgs(null, "Wrong parcel: " + str));
+                                    return;
                                 }
+                                var IpAddress = ((IPEndPoint)client.Client.RemoteEndPoint).Address;
+                                Debug.WriteLine($"DevServer. Parcel from TCP ({IpAddress}): '{str}'");
+
+                                var num = int.Parse(str.Extract('(', ')', i));
+                                AddOrUpdate(IpAddress, num);
+
                                 byte[] back = Encoding.ASCII.GetBytes("OK\n");
                                 stream.Write(back, 0, back.Length);
                             }

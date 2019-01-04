@@ -1,6 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading.Tasks;
 using TechBrain;
 using TechBrain.CustomEventArgs;
 using TechBrain.Entities;
@@ -31,12 +36,24 @@ namespace ConsoleLauncher
                    }
                 }
             });
+
+            var sim = new Simulator(config, devices);
+            sim.Start();
+
             var devServer = new DevServer(config, devices);
+            devServer.ErrorLog += DevServer_ErrorLog;
             devServer.Start();
+
+            sim.EspSend();
             while (true)
             {
 
             }
+        }
+
+        private static void DevServer_ErrorLog(object sender, CommonEventArgs e)
+        {
+            Console.WriteLine(e.Message);
         }
     }
 }

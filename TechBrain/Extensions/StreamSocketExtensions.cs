@@ -20,37 +20,21 @@ namespace TechBrain.Extensions
             client.Client.Send(bytes.ToArray());
         }
 
-        public static string WaitResponse(this TcpClient client, string waitStr)
-        {
-            using (var stream = client.GetStream())
-            {
-                using (var reader = new StreamReader(stream, Encoding.ASCII))
-                {
-                    while (true)
-                    {
-                        var str = reader.ReadLine();
-                        if (str.IndexOf(waitStr) != -1)
-                            return str;
-                    }
-                }
-            }
-        }
-
-        public static IList<byte> Read(this NetworkStream stream, byte? startByte = null, byte? endByte = null, int maxParcelSize = 255)
+        public static byte[] Read(this NetworkStream stream, byte? startByte = null, byte? endByte = null, int maxParcelSize = 255)
         {
             byte? waitByte = startByte ?? endByte;
             var bytes = new byte[maxParcelSize];
             int i = 0;
             bool canSave = startByte == null;
             var timeout = stream.ReadTimeout;
+            if (timeout == -1)
+                timeout = 5000;
             var sw = new Stopwatch();
             sw.Start();
             while (true)
             {
-                sw.Stop();
                 if (i == maxParcelSize || sw.ElapsedMilliseconds > timeout)
                     throw new TimeoutException("Read timeout: " + timeout + "ms");
-                sw.Start();
 
                 if (waitByte == null)
                 {
@@ -78,21 +62,45 @@ namespace TechBrain.Extensions
                         break;
                 }
             }
-            return bytes.Take(i).ToList();
+            return bytes.Take(i).ToArray();
         }
 
-        public static IList<byte> Read(this TcpClient client, byte? startByte = null, byte? endByte = null, int maxParcelSize = 255)
+        public static byte[] Read(this TcpClient client, byte? startByte = null, byte? endByte = null, int maxParcelSize = 255)
         {
             try
             {
-                using (var stream = client.GetStream())
-                {
-                    return stream.Read(startByte, endByte, maxParcelSize);
-                }
+                var stream = client.GetStream();
+                return stream.Read(startByte, endByte, maxParcelSize);
             }
             catch (TimeoutException ex)
             {
                 throw new TimeoutException("TcpClient.Read(...)", ex);
+            }
+
+        }
+
+        public static string ReadLine(this TcpClient client)
+        {
+            var bytes = Read(client, null, (byte)'\n'); //todo find by '\r'
+            var str = Encoding.ASCII.GetString(bytes).Trim('\r', '\n');
+            return str;
+        }
+
+        public static string WaitResponse(this TcpClient client, string waitStr)
+        {
+            var timeout = client.ReceiveTimeout;
+            if (timeout == -1)
+                timeout = 5000;
+            var sw = new Stopwatch();
+            sw.Start();
+            while (true)
+            {
+                if (sw.ElapsedMilliseconds > timeout)
+                    throw new TimeoutException("Read timeout: " + timeout + "ms");
+
+                var str = ReadLine(client);
+                if (str.IndexOf(waitStr) != -1)
+                    return str;
             }
 
         }

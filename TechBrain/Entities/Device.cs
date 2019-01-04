@@ -40,7 +40,7 @@ namespace TechBrain.Entities
         public virtual bool HasResponse { get; set; } = true;
 
         #region ESP
-        public int? IpPort { get; set; } = 80; //todo config
+        public int? IpPort { get; set; } = 1999;//80;
         public IPAddress IpAddress { get; set; }
         #endregion
 
