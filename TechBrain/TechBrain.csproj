@@ -48,7 +48,6 @@
     <Compile Include="AsyncTimerAction.cs" />
     <Compile Include="Communication\Drivers\TcpDriver.cs" />
     <Compile Include="Communication\Drivers\IDriverClient.cs" />
-    <Compile Include="Communication\Drivers\TcpDriverClient.cs" />
     <Compile Include="Communication\Protocols\EspProtocol.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="CustomEventArgs\CommonEventArgs.cs" />

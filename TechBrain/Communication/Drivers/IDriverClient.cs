@@ -11,6 +11,6 @@ namespace TechBrain.Communication.Drivers
         void Write(string v);
         void WaitResponse(string v);
         void Write(IEnumerable<byte> bt);
-        IList<byte> Read(byte startByte, byte endByte, int maxParcelSize);
+        IList<byte> Read(byte? startByte, byte? endByte, int maxParcelSize = 255);
     }
 }
