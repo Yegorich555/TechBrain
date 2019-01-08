@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using TechBrain.Communication.Drivers;
@@ -45,6 +46,7 @@ namespace TechBrain.Entities
         #endregion
 
         public DeviceTypes Type { get; set; }
+
         public IDriver Driver
         {
             get
@@ -57,11 +59,16 @@ namespace TechBrain.Entities
                         break;
                     case DeviceTypes.ESP:
                     case DeviceTypes.ESP_AVR:
-                        return new TcpDriver(IpAddress, IpPort);
+                        return new TcpDriver(IpAddress, (int)IpPort)
+                        {
+
+                        };
                 }
                 throw new NotImplementedException();
             }
         }
+
+        [JsonIgnore]
         public Protocol Protocol
         {
             get

@@ -9,9 +9,9 @@ namespace TechBrain.Communication.Drivers
     public class TcpDriver : IDriver
     {
         private readonly IPAddress ipAddress;
-        private int? ipPort;
+        private int ipPort;
 
-        public TcpDriver(IPAddress ipAddress, int? ipPort)
+        public TcpDriver(IPAddress ipAddress, int ipPort)
         {
             this.ipAddress = ipAddress;
             this.ipPort = ipPort;
@@ -20,8 +20,9 @@ namespace TechBrain.Communication.Drivers
         public IDriverClient OpenClient()
         {
             var client = new TcpClient();
-            client.SendTimeout = 300;
-            client.ReceiveTimeout = 300;
+            client.SendTimeout = 3000; //todo
+            client.ReceiveTimeout = 3000;//todo
+            client.Connect(ipAddress, ipPort);
             return new Client(client);
         }
 
@@ -38,7 +39,12 @@ namespace TechBrain.Communication.Drivers
             public void WaitResponse(string v) => client.WaitResponse(v);
             public void Write(string v) => client.Write(v);
             public void Write(IEnumerable<byte> bt) => client.Write(bt);
-            public void Dispose() => client.Dispose();
+            public void Dispose()
+            {
+                client.Close();
+                client.Dispose();
+
+            }
         }
     }
 }

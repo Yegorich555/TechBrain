@@ -2,14 +2,10 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using TechBrain.CustomEventArgs;
 using TechBrain.Entities;
 using TechBrain.Extensions;
 
@@ -17,82 +13,74 @@ namespace TechBrain.Services
 {
     public class DevServer : IDisposable
     {
-        public event EventHandler<CommonEventArgs> ErrorLog;
+        public event EventHandler<string> ErrorLog;
         public ConcurrentBag<Device> Devices;
 
-        Thread _thread;
         Config _config;
+        TcpServer _tcpServer;
         public DevServer(Config config, IList<Device> devices)
         {
             _config = config;
             Devices = new ConcurrentBag<Device>(devices);
         }
 
-        public volatile static bool LoopEnd;
-
         public void Start()
         {
-            TcpListen(_config.TcpPort, _config.TcpReceiveTimeout);
+            _tcpServer = new TcpServer
+            {
+                Port = _config.TcpPort,
+                ReceiveTimeout = _config.TcpReceiveTimeout,
+                SendTimeout = _config.TcpSendTimeout,
+                ThreadName = "DevServer_ESP_TCP",
+            };
+            _tcpServer.GotNewClient += GotNewClient;
+            _tcpServer.Start();
         }
 
-
-        void TcpListen(int port, int receiveTimeout)
+        public void Stop()
         {
-            LoopEnd = true;
-
-            _thread = new Thread(() =>
+            if (_tcpServer != null)
             {
-                LoopEnd = false;
-                var server = new TcpListener(IPAddress.Any, port); //todo port+1, port+2 if this is busy
-                server.Start();
-                Loop(server, receiveTimeout);
-                server.Stop();
-            });
-
-            _thread.Name = "DevServerTCP";
-            _thread.Start();
-
+                _tcpServer.Stop();
+                _tcpServer.GotNewClient -= GotNewClient;
+            }
         }
 
-        void Loop(TcpListener server, int receiveTimeout)
+        void GotNewClient(object sender, TcpClient client)
         {
-            while (true && !LoopEnd)
+            try
             {
-                if (!server.Pending())
-                    continue;
-
-                Task.Run(() =>
+                using (var stream = client.GetStream())
                 {
-                    try
-                    {
-                        using (var client = server.AcceptTcpClient())
-                        {
-                            client.ReceiveTimeout = receiveTimeout;
-                            using (var stream = client.GetStream())
-                            {
-                                var str = client.ReadLine();
-                                var i = str.IndexOf("I am");
-                                if (i == -1)
-                                {
-                                    ErrorLog?.Invoke(this, new CommonEventArgs(null, "Wrong parcel: " + str));
-                                    return;
-                                }
-                                var IpAddress = ((IPEndPoint)client.Client.RemoteEndPoint).Address;
-                                Debug.WriteLine($"DevServer. Parcel from TCP ({IpAddress}): '{str}'");
+                    Debug.WriteLine($"DevServer.ESP. New client");
+                    var str = client.ReadLine();
+                    Debug.WriteLine($"DevServer.ESP. Parcel from {client.Client.RemoteEndPoint}: '{str}'");
 
-                                var num = int.Parse(str.Extract('(', ')', i));
-                                AddOrUpdate(IpAddress, num);
-
-                                byte[] back = Encoding.ASCII.GetBytes("OK\n");
-                                stream.Write(back, 0, back.Length);
-                            }
-                        }
-                    }
-                    catch (Exception ex)
+                    var i = str.IndexOf("I am", StringComparison.OrdinalIgnoreCase);
+                    if (i == -1)
                     {
-                        ErrorLog?.Invoke(this, new CommonEventArgs(null, "Tcp client exception:" + ex));
+                        Debug.WriteLine($"DevServer.ESP. Wrong parcel: " + str);
+                        ErrorLog?.Invoke(this, "Wrong parcel: " + str);
+                        return;
                     }
-                });
+
+                    var num = int.Parse(str.Extract('(', ')', i));
+                    var IpAddress = ((IPEndPoint)client.Client.RemoteEndPoint).Address;
+                    AddOrUpdate(IpAddress, num);
+
+                    byte[] back = Encoding.ASCII.GetBytes("OK\n");
+                    stream.Write(back, 0, back.Length);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"DevServer.ESP. Exception: " + ex);
+                ErrorLog?.Invoke(this, "Tcp client exception:" + ex);
+            }
+            finally
+            {
+                client?.Close();
+                client?.Dispose();
             }
         }
 
@@ -128,9 +116,8 @@ namespace TechBrain.Services
                 if (disposing)
                 {
                 }
-                LoopEnd = true;
                 Devices = null;
-                _thread = null;
+                Stop();
                 disposedValue = true;
                 _config = null;
             }

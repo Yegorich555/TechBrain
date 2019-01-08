@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using TechBrain;
 using TechBrain.Entities;
 using TechBrain.Extensions;
+using TechBrain.Services;
 
 namespace ConsoleLauncher
 {
@@ -16,7 +15,7 @@ namespace ConsoleLauncher
     {
         private Config config;
         private List<Device> devices;
-
+        TcpServer _tcpServer;
         public Simulator(Config config, List<Device> devices)
         {
             this.config = config;
@@ -25,35 +24,37 @@ namespace ConsoleLauncher
 
         public void Start()
         {
-            Task.Run(() =>
+            _tcpServer = new TcpServer()
             {
-                var server = new TcpListener(IPAddress.Any, 1999);
-                server.Start();
-                while (true)
-                {
-                    if (!server.Pending())
-                        continue;
+                Port = 1999,
+                ReceiveTimeout = 200,
+                SendTimeout = 200,
+                ThreadName = "Simulator_TcpListener",
+            };
+            _tcpServer.GotNewClient += _tcpServer_GotNewClient;
+            _tcpServer.Start();
 
-                    Task.Run(() =>
-                    {
-                        try
-                        {
-                            using (var client = server.AcceptTcpClient())
-                            {
-                                client.ReceiveTimeout = 200;
-                                var str = client.ReadLine();
-                                Console.WriteLine($"Simulator get: '${str}'");
-                                var result = str.Contains("esp_") ? "OK: " : "Error: " + str.Replace("esp_", "");
-                                client.Client.Send(Encoding.ASCII.GetBytes(result));
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine("Simulator: " + ex);
-                        }
-                    });
-                }
-            });
+        }
+
+        private void _tcpServer_GotNewClient(object sender, TcpClient client)
+        {
+            try
+            {
+                Debug.WriteLine("Simulator new client");
+                var str = client.ReadLine();
+                var result = (str.Contains("esp_") ? "OK: " : "Error: ") + str.Replace("esp_", "") + '\n';
+                client.Client.Send(Encoding.ASCII.GetBytes(result));
+                Debug.WriteLine($"Simulator get: '{str}'");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("Simulator: " + ex);
+            }
+            finally
+            {
+                client?.Close();
+                client?.Dispose();
+            }
         }
 
         internal void EspSend()
@@ -67,12 +68,12 @@ namespace ConsoleLauncher
                     client.Connect("localhost", config.TcpPort);
                     client.Write($"I am ({dev.SerialNumber})\n");
                     var str = client.ReadLine();
-                    Console.WriteLine($"Simulator. Esp get: '{str}'");
+                    Debug.WriteLine($"Simulator. Esp get: '{str}'");
                 }
             }
             catch (TimeoutException ex)
             {
-                Console.WriteLine(ex);
+                Debug.WriteLine(ex);
             }
         }
     }

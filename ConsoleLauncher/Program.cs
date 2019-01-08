@@ -1,15 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 using TechBrain;
-using TechBrain.CustomEventArgs;
 using TechBrain.Entities;
-using TechBrain.Extensions;
 using TechBrain.Services;
 
 namespace ConsoleLauncher
@@ -41,19 +34,16 @@ namespace ConsoleLauncher
             sim.Start();
 
             var devServer = new DevServer(config, devices);
-            devServer.ErrorLog += DevServer_ErrorLog;
+            devServer.ErrorLog += (object s, string e) => Console.WriteLine(e);
             devServer.Start();
 
+            Thread.Sleep(20);
             sim.EspSend();
             while (true)
             {
-
+                Console.WriteLine("ping: " + devices[0].Ping());
+                Thread.Sleep(2000);
             }
-        }
-
-        private static void DevServer_ErrorLog(object sender, CommonEventArgs e)
-        {
-            Console.WriteLine(e.Message);
         }
     }
 }
