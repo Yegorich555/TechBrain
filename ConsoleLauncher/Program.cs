@@ -30,8 +30,8 @@ namespace ConsoleLauncher
                        Type = OutputTypes.Pwm,
                    }
                 },
-                ReadTimeout = 200,
-                WriteTimeout = 200,
+                ResponseTimeout = 200,
+                IpPort = config.TcpEspPort,
             });
 
             var sim = new Simulator(config, devices);

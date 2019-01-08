@@ -64,9 +64,10 @@ namespace ConsoleLauncher
                 var dev = devices.First(a => a.Type == DeviceTypes.ESP);
                 using (var client = new TcpClient())
                 {
-                    client.ReceiveTimeout = config.TcpReceiveTimeout;
                     client.Connect("localhost", config.TcpPort);
                     client.Write($"I am ({dev.SerialNumber})\n");
+
+                    client.ReceiveTimeout = config.TcpResponseTimeout;
                     var str = client.ReadLine();
                     Debug.WriteLine($"Simulator. Esp get: '{str}'");
                 }

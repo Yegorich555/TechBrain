@@ -22,7 +22,7 @@ namespace TechBrain.Communication.Protocols
                 using (var client = Driver.OpenClient())
                 {                
                     client.Write("esp_ping()\n");                    
-                    client.WaitResponse("OK: ping");
+                    client.WaitResponse("OK: ping()");
                     return true;
                 }
             }
