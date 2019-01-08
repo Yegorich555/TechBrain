@@ -52,19 +52,11 @@ namespace TechBrain.Services
             {
                 using (var stream = client.GetStream())
                 {
-                    Debug.WriteLine($"DevServer.ESP. New client");
-                    var str = client.ReadLine();
+                    Debug.WriteLine($"DevServer.ESP. New client: {client.Client.RemoteEndPoint}");
+                    var str = client.WaitResponse("I am");
                     Debug.WriteLine($"DevServer.ESP. Parcel from {client.Client.RemoteEndPoint}: '{str}'");
 
-                    var i = str.IndexOf("I am", StringComparison.OrdinalIgnoreCase);
-                    if (i == -1)
-                    {
-                        Debug.WriteLine($"DevServer.ESP. Wrong parcel: " + str);
-                        ErrorLog?.Invoke(this, "Wrong parcel: " + str);
-                        return;
-                    }
-
-                    var num = int.Parse(str.Extract('(', ')', i));
+                    var num = int.Parse(str.Extract('(', ')'));
                     var IpAddress = ((IPEndPoint)client.Client.RemoteEndPoint).Address;
                     AddOrUpdate(IpAddress, num);
 
