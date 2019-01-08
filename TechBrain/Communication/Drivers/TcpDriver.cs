@@ -17,11 +17,14 @@ namespace TechBrain.Communication.Drivers
             this.ipPort = ipPort;
         }
 
+        public int WriteTimeout { get; set; } = 1000;
+        public int ReadTimeout { get; set; } = 1000;
+
         public IDriverClient OpenClient()
         {
             var client = new TcpClient();
-            client.SendTimeout = 3000; //todo
-            client.ReceiveTimeout = 3000;//todo
+            client.SendTimeout = WriteTimeout;
+            client.ReceiveTimeout = ReadTimeout;
             client.Connect(ipAddress, ipPort);
             return new Client(client);
         }
@@ -43,7 +46,6 @@ namespace TechBrain.Communication.Drivers
             {
                 client.Close();
                 client.Dispose();
-
             }
         }
     }

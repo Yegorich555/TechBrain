@@ -14,11 +14,16 @@ namespace TechBrain.Communication.Drivers
 
     public interface IDriver
     {
-        //int WriteReadTimeout { get; set; }
-        //bool Write(IEnumerable<byte> bytes);
-        //IList<byte> Read(byte? startWaitByte = null, byte? endWaitByte = null, int maxLength = 255);
-        //T WriteRead<T>(int addr, IEnumerable<byte> bt, Func<IList<byte>, T> extractFunc);
-        //IDisposable GetClient();
+        int WriteTimeout { get; set; }
+        int ReadTimeout { get; set; }
         IDriverClient OpenClient();
+    }
+
+    public interface IDriverClient : IDisposable
+    {
+        void Write(string v);
+        void WaitResponse(string v);
+        void Write(IEnumerable<byte> bt);
+        IList<byte> Read(byte? startByte, byte? endByte, int maxParcelSize = 255);
     }
 }

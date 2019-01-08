@@ -27,7 +27,7 @@ namespace TechBrain.Extensions
             int i = 0;
             bool canSave = startByte == null;
             var timeout = stream.ReadTimeout;
-            if (timeout == -1)
+            if (timeout < 1)
                 timeout = 5000;
             var sw = new Stopwatch();
             sw.Start();
@@ -89,7 +89,7 @@ namespace TechBrain.Extensions
         public static string WaitResponse(this TcpClient client, string waitStr)
         {
             var timeout = client.ReceiveTimeout;
-            if (timeout == -1)
+            if (timeout < 1)
                 timeout = 5000;
             var sw = new Stopwatch();
             sw.Start();

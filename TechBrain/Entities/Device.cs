@@ -40,6 +40,10 @@ namespace TechBrain.Entities
         public virtual bool HasSleep { get; set; } = true;
         public virtual bool HasResponse { get; set; } = true;
 
+        public int WriteTimeout { get; set; }
+        public int ReadTimeout { get; set; }
+        //public int Repeats { get; set; }
+
         #region ESP
         public int? IpPort { get; set; } = 1999;//80;
         public IPAddress IpAddress { get; set; }
@@ -61,7 +65,8 @@ namespace TechBrain.Entities
                     case DeviceTypes.ESP_AVR:
                         return new TcpDriver(IpAddress, (int)IpPort)
                         {
-
+                            ReadTimeout = ReadTimeout,
+                            WriteTimeout = WriteTimeout,
                         };
                 }
                 throw new NotImplementedException();

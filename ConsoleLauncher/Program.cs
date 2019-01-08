@@ -17,6 +17,8 @@ namespace ConsoleLauncher
             {
                 SerialNumber = 1,
                 HasSleep = true,
+                HasResponse = true,
+                HasTime = true,
                 Name = "FirstESP",
                 Type = DeviceTypes.ESP,
                 Outputs = new List<DeviceOutput>()
@@ -27,7 +29,9 @@ namespace ConsoleLauncher
                        Name = "TestOut1",
                        Type = OutputTypes.Pwm,
                    }
-                }
+                },
+                ReadTimeout = 200,
+                WriteTimeout = 200,
             });
 
             var sim = new Simulator(config, devices);
