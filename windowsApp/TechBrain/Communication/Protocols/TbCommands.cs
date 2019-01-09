@@ -11,7 +11,8 @@ namespace TechBrain.Communication.Protocols
         getSensors = (byte)'g',
         changeOut = (byte)'o',
         changeRepeater = (byte)'t',
-        setRepeats = (byte)'u'
+        setRepeats = (byte)'u',
+        sendAnswer = (byte)'-'
     }
 
     public class TbCommands

@@ -54,18 +54,16 @@ namespace ConsoleLauncher
                     if (str.Contains("esp_"))
                     {
                         var result = (str.Contains("esp_") ? "OK: " : "Error: ") + str.Replace("esp_", "") + '\n';
-                        client.Client.Send(Encoding.ASCII.GetBytes(result));
+                        stream.Write(Encoding.ASCII.GetBytes(result));
                         Debug.WriteLine($"Simulator get: '{str}'");
                     }
                     else
                     {
-                        var bytes = buf.Take(count).ToList();
-                        if (TbProtocol.IsGoodQuality(bytes, TbProtocol.CommonAddr))
-                        {
-                            var address = TbProtocol.ExtractAddress(buf);
-                            Debug.WriteLine($"Simulator get from '{address}'");
-                        }
-                        //todo implement return
+                        var bytes = buf.Take(count);
+                        var address = TbProtocol.ExtractAddressFrom(buf);
+                        Debug.WriteLine($"Simulator get from '{address}'");
+                        var bt = TbProtocol.GetResponse(bytes.ToList());
+                        stream.Write(bt.ToArray());
                     }
                 }
             }

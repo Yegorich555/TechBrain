@@ -81,8 +81,9 @@ namespace TechBrain.Entities
                     case DeviceTypes.None:
                         throw new NullReferenceException("Device type is not defined");
                     case DeviceTypes.AVR:
-                    case DeviceTypes.ESP_AVR:
                         return new TbProtocol(Driver, SerialNumber);
+                    case DeviceTypes.ESP_AVR:
+                        return new TbProtocol(Driver);
                     case DeviceTypes.ESP:
                         return new EspProtocol(Driver);
                 }

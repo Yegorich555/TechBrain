@@ -11,6 +11,11 @@ namespace TechBrain.Extensions
 {
     public static class StreamSocketExtensions
     {
+        public static void Write(this NetworkStream stream, byte[] bytes)
+        {
+            stream.Write(bytes, 0, bytes.Length);
+        }
+
         public static void Write(this TcpClient client, string str)
         {
             Write(client, Encoding.ASCII.GetBytes(str));

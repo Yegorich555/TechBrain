@@ -49,7 +49,9 @@ namespace ConsoleLauncher
                        Name = "TestOut1",
                        Type = OutputTypes.Pwm,
                    }
-                }
+                },
+                ResponseTimeout = 500,
+                IpPort = config.TcpEspPort,
             });
 
             var sim = new Simulator(config, devices);
@@ -64,8 +66,8 @@ namespace ConsoleLauncher
             sim.EspSend(devices[1].SerialNumber);
             while (true)
             {
-                Console.WriteLine("ping: " + devices[0].Ping());
-                Console.WriteLine("ping: " + devices[1].Ping());
+                Console.WriteLine("ping Esp: " + devices[0].Ping());
+                Console.WriteLine("ping Esp_Avr: " + devices[1].Ping());
                 Thread.Sleep(2000);
             }
         }

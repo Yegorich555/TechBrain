@@ -2,17 +2,17 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using TechBrain.Communication.Drivers;
 using TechBrain.Entities;
 using TechBrain.Extensions;
-using TechBrain.Services.FLogger;
 
 namespace TechBrain.Communication.Protocols
 {
     public class TbProtocol : Protocol
     {
         readonly byte address;
-        public TbProtocol(IDriver driver, int address) : base(driver)
+        public TbProtocol(IDriver driver, int address = 0) : base(driver)
         {
             this.address = address != 0 ? (byte)address : TbProtocol.DefaultAddr;
         }
@@ -35,38 +35,37 @@ namespace TechBrain.Communication.Protocols
 
         public static IEnumerable<byte> GetParcel_ChangeRepeater(int addr, bool isSetRepeater, bool answerEn = true)
         {
-            return GetParcelCmd((byte)OwnAddress, (byte)addr, (byte)RepeatQuantity, answerEn, TbCommands.ChangeRepeater((byte)(isSetRepeater ? 1 : 0)));
+            return GetParcel((byte)OwnAddress, (byte)addr, (byte)RepeatQuantity, answerEn, TbCommands.ChangeRepeater((byte)(isSetRepeater ? 1 : 0)));
         }
 
         public static IEnumerable<byte> GetParcel_ChangeOut(int addr, int number, int value, bool answerEn = true)
         {
-            return GetParcelCmd((byte)OwnAddress, (byte)addr, (byte)RepeatQuantity, answerEn, TbCommands.ChangeOutput((byte)number, (byte)value));
+            return GetParcel((byte)OwnAddress, (byte)addr, (byte)RepeatQuantity, answerEn, TbCommands.ChangeOutput((byte)number, (byte)value));
         }
 
         public static IEnumerable<byte> GetParcel_GetSensors(int addr, bool answerEn = true)
         {
-            return GetParcelCmd((byte)OwnAddress, (byte)addr, (byte)RepeatQuantity, answerEn, TbCommands.GetSensors());
+            return GetParcel((byte)OwnAddress, (byte)addr, (byte)RepeatQuantity, answerEn, TbCommands.GetSensors());
         }
 
-        public static IEnumerable<byte> GetParcel_GetAddress(bool answerEn = true)
+        public static IEnumerable<byte> GetParcel_GetAddress()
         {
-            return GetParcelCmd((byte)OwnAddress, CommonAddr, (byte)RepeatQuantity, answerEn, TbCommands.GetAddress());
+            return GetParcel((byte)OwnAddress, CommonAddr, (byte)RepeatQuantity, true, TbCommands.GetAddress());
         }
 
         public static IEnumerable<byte> GetParcel_SetClock(DateTime dt, bool answerEn = true)
         {
-            return GetParcelCmd((byte)OwnAddress, CommonAddr, (byte)RepeatQuantity, answerEn, TbCommands.SetClock(dt));
+            return GetParcel((byte)OwnAddress, CommonAddr, (byte)RepeatQuantity, answerEn, TbCommands.SetClock(dt));
         }
 
         public static IEnumerable<byte> GetParcel_SetClock(int dayOfWeek, int hours, int minutes, bool answerEn = true)
         {
-            return GetParcelCmd((byte)OwnAddress, CommonAddr, (byte)RepeatQuantity, answerEn, TbCommands.SetClock(dayOfWeek, hours, minutes));
+            return GetParcel((byte)OwnAddress, CommonAddr, (byte)RepeatQuantity, answerEn, TbCommands.SetClock(dayOfWeek, hours, minutes));
         }
-
 
         public static IEnumerable<byte> GetParcel_SetAddress(int addr, bool forCommonAddr, bool answerEn = true)
         {
-            return GetParcelCmd((byte)OwnAddress, forCommonAddr ? CommonAddr : DefaultAddr, (byte)RepeatQuantity, answerEn, TbCommands.SetAddress((byte)addr));
+            return GetParcel((byte)OwnAddress, forCommonAddr ? CommonAddr : DefaultAddr, (byte)RepeatQuantity, answerEn, TbCommands.SetAddress((byte)addr));
         }
 
         public static byte GetCrc(IEnumerable<byte> str)
@@ -84,7 +83,7 @@ namespace TechBrain.Communication.Protocols
             return crcByte;
         }
 
-        public static IEnumerable<byte> GetParcelCmd(byte fromAddr, byte toAddr, byte repeatCount, bool answerEnable, IEnumerable<Byte> cmd)
+        public static IEnumerable<byte> GetParcel(byte fromAddr, byte toAddr, byte repeatCount, bool answerEnable, IEnumerable<Byte> cmd)
         {
             yield return StartByte;
             var body = GetParcelBody(fromAddr, toAddr, repeatCount, answerEnable, cmd).ToList();
@@ -123,20 +122,20 @@ namespace TechBrain.Communication.Protocols
             }
         }
 
-        public static bool IsGoodQuality(IList<byte> parcel, int checkReturnAddr)
+        public static bool IsGoodQuality(IList<byte> parcel, int checkReturnAddr, bool checkAnwserAddress = true)
         {
-            Logger.Debug("Uart.Protocol. Checking quality...");
+            Debug.WriteLine("TbProtocol. Checking quality...");
 
-            var err = FindError(parcel, checkReturnAddr);
+            var err = FindError(parcel, checkReturnAddr, checkAnwserAddress);
             if (err != null)
-                Logger.Debug($"Uart.Protocol. Bad quality parcel: {err}\n Parcel bytes: {Extender.BuildStringSep(" ", parcel)}");
+                Debug.WriteLine($"TbProtocol. Bad quality parcel: {err}\n Parcel bytes: {Extender.BuildStringSep(" ", parcel)}");
             else
-                Logger.Debug("Uart.Protocol. Checking quality: Successfull");
+                Debug.WriteLine("TbProtocol. Checking quality: Successfull");
 
             return err == null;
         }
 
-        static string FindError(IList<byte> parcel, int checkReturnAddr)
+        static string FindError(IList<byte> parcel, int checkReturnAddr, bool checkAnwserAddress)
         {
             if (parcel == null || parcel.Count < MinParcelSize)
                 return ($"It's small {parcel?.Count.ToStringNull("0")} < {MinParcelSize}");
@@ -152,8 +151,8 @@ namespace TechBrain.Communication.Protocols
             if (parcel[i - 1] != checkReturnAddr && checkReturnAddr != CommonAddr)
                 return ($"Returning address is not match {checkReturnAddr}");
 
-            if (parcel[i + 1] != CommonAnswerAddr)
-                return ($"Returning address is not match {CommonAnswerAddr}");
+            if (checkAnwserAddress && parcel[i + 1] != CommonAnswerAddr)
+                return ($"Returning anwser address is not match {CommonAnswerAddr}");
 
             var crcParcel = parcel.Skip(i - 1);
             var crc = GetCrc(crcParcel.Take(crcParcel.Count() - 1));
@@ -183,7 +182,7 @@ namespace TechBrain.Communication.Protocols
             return lst;
         }
 
-        public static byte? ExtractAddress(IList<byte> parcel)
+        public static byte? ExtractAddressFrom(IList<byte> parcel)
         {
             int i = parcel.IndexOf(CommandByte);
             if (i == -1 || i == 0)
@@ -231,9 +230,43 @@ namespace TechBrain.Communication.Protocols
 
         static void Test_GetCrc(Action<byte, IEnumerable<byte>> afterGetCrc, byte fromAddr, byte toAddr, byte repeatCount, byte answerEnable, IEnumerable<byte> cmd)
         {
-            var parcel = TbProtocol.GetParcelCmd(fromAddr, toAddr, repeatCount, answerEnable == 1, cmd);
+            var parcel = TbProtocol.GetParcel(fromAddr, toAddr, repeatCount, answerEnable == 1, cmd);
             var crc = GetCrc(parcel);
             afterGetCrc?.Invoke(crc, parcel);
+        }
+
+        public static IEnumerable<byte> GetResponse(IList<byte> bytes)
+        {
+            if (!IsGoodQuality(bytes, CommonAddr, false))
+                return new byte[0];
+            var i = bytes.IndexOf(CommandByte);
+            var b = (AvrTbCmdType)bytes[i + 3];
+
+            IEnumerable<byte> GetAnswer()
+            {
+                var lst = new List<byte>()
+                {
+                    (byte)AvrTbCmdType.sendAnswer
+                };
+
+                if (lst.Count > 1 || b == AvrTbCmdType.getAddress)
+                {
+                    lst.AddRange(Encoding.ASCII.GetBytes("OK"));
+                    return lst;
+                }
+                throw new NotImplementedException();
+            }
+
+            var answer = GetAnswer();
+            //var toAddr = ExtractAddressFrom(bytes);
+
+            var bt = GetParcel((byte)addr, CommonAnswerAddr, 1, true, answer);
+
+            //fix repeatCountPart
+            //var i2 = bytes.IndexOf(CommandByte);
+            //bt[i2 + 2] = bytes[i + 2];
+
+            return bt;
         }
 
         #endregion
@@ -257,7 +290,7 @@ namespace TechBrain.Communication.Protocols
                 {
                     var bt = TbProtocol.GetParcel_GetAddress();
                     client.Write(bt);
-                    var addr = WaitResponse(client, TbProtocol.CommonAddr, TbProtocol.ExtractAddress);
+                    var addr = WaitResponse(client, TbProtocol.CommonAddr, TbProtocol.ExtractAddressFrom);
                     return true;
                 }
             }
