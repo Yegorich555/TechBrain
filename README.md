@@ -1,11 +1,11 @@
 # TechBrain
 
-Project for smartHome (remote socket switcher etc.)
+Project for SmartHome (remote socket switcher, home sensors, etc.)
 
 ## Supporting devices
 
-- ES8266 like uart-to-tcp and socket switcher
-- AVR like Attiny13 and Atmega8
+- ESP8266 like uart-to-tcp and socket switcher
+- AVR (Attiny13 and Atmega8) like socket switcher by UART responses
 
 ## Applications
 
