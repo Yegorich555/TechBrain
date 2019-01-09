@@ -259,8 +259,8 @@ namespace TechBrain.Communication.Protocols
 
             var answer = GetAnswer();
             //var toAddr = ExtractAddressFrom(bytes);
-
-            var bt = GetParcel((byte)addr, CommonAnswerAddr, 1, true, answer);
+            var fromAddr = bytes[i + 1];
+            var bt = GetParcel(fromAddr, CommonAnswerAddr, 1, true, answer);
 
             //fix repeatCountPart
             //var i2 = bytes.IndexOf(CommandByte);
