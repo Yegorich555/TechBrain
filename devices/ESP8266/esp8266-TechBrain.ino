@@ -111,7 +111,7 @@ void setup(void)
     Serial.printf("!!!Chip size (%u) is wrong. Real is %u\n", chipSize, chipRealSize);
 
   DEBUG_MSGF("CpuFreq: %u MHz\n", ESP.getCpuFreqMHz());
-  DEBUG_MSGF("Flash speed: %u MHz\n", ESP.getFlashChipSpeed()/1000/1000);
+  DEBUG_MSGF("Flash speed: %u MHz\n", ESP.getFlashChipSpeed() / 1000 / 1000);
   FlashMode_t ideMode = ESP.getFlashChipMode();
   DEBUG_MSGF("Flash mode: %s\n", (ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" : ideMode == FM_DOUT ? "DOUT" : "UNKNOWN"));
 
@@ -145,14 +145,15 @@ bool WiFi_TryConnect(void)
 
   if (_isFirstConnect || status == WL_NO_SSID_AVAIL || status == WL_CONNECT_FAILED || _isWiFiReconnect)
   {
-    if (!_isFirstConnect)
-    {
-      DEBUG_MSG("ConnectionFailed to '" + WiFi.SSID() + "': " + status);
-    }
-    else if (_isWiFiReconnect)
+    if (_isWiFiReconnect)
     {
       _isWiFiReconnect = false;
-      DEBUG_MSG("Connection to server failed in '" + WiFi.SSID() + "'")
+      WiFi.disconnect();
+      DEBUG_MSG("Connection to TCPserver failed in '" + WiFi.SSID() + "'")
+    }
+    else if (!_isFirstConnect)
+    {
+      DEBUG_MSG("ConnectionFailed to '" + WiFi.SSID() + "': " + status);
     }
 
     const char *ssid;
@@ -167,6 +168,7 @@ bool WiFi_TryConnect(void)
       ssid = WIFI_SSID_2;
       pass = WIFI_PASS_2;
     }
+
     WiFi.begin(ssid, pass);
     setDbgLed(dbgLed_Connecting);
     DEBUG_MSG("Connecting to '" + String(ssid) + "'...");
@@ -319,6 +321,7 @@ void TCP_Loop()
       {
         _isWiFiReconnect = true; //change WiFi SSID if server didn't respond
         cnt_TCPSendNumber = 0;
+        ipAddress = (uint32_t)0;
       }
     }
   }
