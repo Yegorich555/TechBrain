@@ -1,0 +1,41 @@
+VERSION
+8
+
+COMMSETTINGS
+0
+COM4
+COM2
+4800
+2
+0
+4
+0
+0
+
+COMMDISPLAY
+0
+
+VERSATAP
+0
+
+SEND
+0
+
+7F 65 73
+1
+1
+
+SEND
+1
+getSensors(97)
+3E E8 01 5E 61 81 67 FA
+0
+5
+
+SEND
+2
+getAddress
+3E 25 01 5E 63 81 62 FA
+0
+5
+
