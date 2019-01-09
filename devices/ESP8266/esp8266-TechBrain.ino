@@ -366,7 +366,7 @@ void TCP_Loop()
       {
         lastClientNum = i;
         t_isNeedSendIp.reset();                   //reset timeLaps if we have bytes
-        serverClients[i].println("testResponse"); //todo remove after testing;
+        //serverClients[i].println("testResponse"); //todo remove after testing;
         break;
       }
     }
