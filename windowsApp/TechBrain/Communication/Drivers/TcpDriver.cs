@@ -34,7 +34,7 @@ namespace TechBrain.Communication.Drivers
         public class Client : IDriverClient
         {
             private readonly int responseTimeout;
-            private long writeTime;
+            private int writeTime;
             private TcpClient client;
 
             public Client(TcpClient client, int responseTimeout)
@@ -45,14 +45,9 @@ namespace TechBrain.Communication.Drivers
 
             T WrapRead<T>(Func<T> func)
             {
-                var sw = new Stopwatch();
-                sw.Start();
+                client.ReceiveTimeout -= writeTime;
                 var v = func();
-                sw.Stop();
-                var responseTime = sw.ElapsedMilliseconds + writeTime;
                 writeTime = 0;
-                if (responseTime >= responseTimeout)
-                    throw new TimeoutException($"Response timeout: {responseTimeout} ms");
                 return v;
             }
 
@@ -62,7 +57,7 @@ namespace TechBrain.Communication.Drivers
                 sw.Start();
                 func();
                 sw.Stop();
-                writeTime = sw.ElapsedMilliseconds;
+                writeTime = sw.ElapsedMilliseconds <= int.MaxValue ? (int)sw.ElapsedMilliseconds : int.MaxValue;
             }
 
             public IList<byte> Read(byte? startByte, byte? endByte, int maxParcelSize = 255) => WrapRead(() => client.Read(startByte, endByte, maxParcelSize));
