@@ -11,7 +11,7 @@ namespace TechBrain.Communication.Protocols
 {
     public class TbProtocol : Protocol
     {
-        byte address;
+        readonly byte address;
         public TbProtocol(IDriver driver, int address) : base(driver)
         {
             this.address = address != 0 ? (byte)address : TbProtocol.DefaultAddr;
@@ -138,9 +138,8 @@ namespace TechBrain.Communication.Protocols
 
         static string FindError(IList<byte> parcel, int checkReturnAddr)
         {
-
-            if (parcel == null || parcel.Count() < MinParcelSize)
-                return ($"It's small {parcel?.Count().ToStringNull("0")} < {MinParcelSize}");
+            if (parcel == null || parcel.Count < MinParcelSize)
+                return ($"It's small {parcel?.Count.ToStringNull("0")} < {MinParcelSize}");
 
             var i = parcel.IndexOf(CommandByte);
 
@@ -243,11 +242,7 @@ namespace TechBrain.Communication.Protocols
         {
             while (true)
             {
-                //todo commonTimeout
                 var parcel = client.Read(TbProtocol.StartByte, TbProtocol.EndByte, TbProtocol.MaxParcelSize);
-                if (!parcel.Any())
-                    return default(T);
-
                 var result = TbProtocol.FindParcel(parcel, addr);
                 if (result != null)
                     return extractFunc(parcel);

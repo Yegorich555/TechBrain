@@ -33,6 +33,24 @@ namespace ConsoleLauncher
                 ResponseTimeout = 200,
                 IpPort = config.TcpEspPort,
             });
+            devices.Add(new Device()
+            {
+                SerialNumber = 2,
+                HasSleep = true,
+                HasResponse = true,
+                HasTime = true,
+                Name = "FirstESP_AVR",
+                Type = DeviceTypes.ESP_AVR,
+                Outputs = new List<DeviceOutput>()
+                {
+                    new DeviceOutput()
+                   {
+                       SerialNumber = 1,
+                       Name = "TestOut1",
+                       Type = OutputTypes.Pwm,
+                   }
+                }
+            });
 
             var sim = new Simulator(config, devices);
             sim.Start();
@@ -42,10 +60,12 @@ namespace ConsoleLauncher
             devServer.Start();
 
             Thread.Sleep(20);
-            sim.EspSend();
+            sim.EspSend(devices[0].SerialNumber);
+            sim.EspSend(devices[1].SerialNumber);
             while (true)
             {
                 Console.WriteLine("ping: " + devices[0].Ping());
+                Console.WriteLine("ping: " + devices[1].Ping());
                 Thread.Sleep(2000);
             }
         }

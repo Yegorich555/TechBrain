@@ -4,7 +4,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using TechBrain;
+using TechBrain.Communication.Protocols;
 using TechBrain.Entities;
 using TechBrain.Extensions;
 using TechBrain.Services;
@@ -41,10 +43,31 @@ namespace ConsoleLauncher
             try
             {
                 Debug.WriteLine("Simulator new client");
-                var str = client.ReadLine();
-                var result = (str.Contains("esp_") ? "OK: " : "Error: ") + str.Replace("esp_", "") + '\n';
-                client.Client.Send(Encoding.ASCII.GetBytes(result));
-                Debug.WriteLine($"Simulator get: '{str}'");
+
+                using (var stream = client.GetStream())
+                {
+                    Thread.Sleep(20);
+                    var buf = new byte[255];
+                    var count = stream.Read(buf, 0, buf.Length);
+
+                    var str = Encoding.ASCII.GetString(buf);
+                    if (str.Contains("esp_"))
+                    {
+                        var result = (str.Contains("esp_") ? "OK: " : "Error: ") + str.Replace("esp_", "") + '\n';
+                        client.Client.Send(Encoding.ASCII.GetBytes(result));
+                        Debug.WriteLine($"Simulator get: '{str}'");
+                    }
+                    else
+                    {
+                        var bytes = buf.Take(count).ToList();
+                        if (TbProtocol.IsGoodQuality(bytes, TbProtocol.CommonAddr))
+                        {
+                            var address = TbProtocol.ExtractAddress(buf);
+                            Debug.WriteLine($"Simulator get from '{address}'");
+                        }
+                        //todo implement return
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -57,15 +80,14 @@ namespace ConsoleLauncher
             }
         }
 
-        internal void EspSend()
+        internal void EspSend(int number)
         {
             try
             {
-                var dev = devices.First(a => a.Type == DeviceTypes.ESP);
                 using (var client = new TcpClient())
                 {
                     client.Connect("localhost", config.TcpPort);
-                    client.Write($"I am ({dev.SerialNumber})\n");
+                    client.Write($"I am ({number})\n");
 
                     client.ReceiveTimeout = config.TcpResponseTimeout;
                     var str = client.ReadLine();
