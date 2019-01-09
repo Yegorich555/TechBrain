@@ -68,6 +68,7 @@ namespace ConsoleLauncher
             {
                 Console.WriteLine("ping Esp: " + devices[0].Ping());
                 Console.WriteLine("ping Esp_Avr: " + devices[1].Ping());
+                Console.WriteLine("time Esp_Avr: " + devices[1].SetTime(DateTime.Now));
                 Thread.Sleep(2000);
             }
         }

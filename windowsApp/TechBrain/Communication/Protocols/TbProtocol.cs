@@ -12,9 +12,12 @@ namespace TechBrain.Communication.Protocols
     public class TbProtocol : Protocol
     {
         readonly byte address;
-        public TbProtocol(IDriver driver, int address = 0) : base(driver)
+        readonly bool canAnswer;
+
+        public TbProtocol(IDriver driver, bool canAnswer = true, int address = 0) : base(driver)
         {
             this.address = address != 0 ? (byte)address : TbProtocol.DefaultAddr;
+            this.canAnswer = canAnswer;
         }
         #region Static
         public static byte StartByte { get; set; } = (byte)'>';
@@ -31,7 +34,7 @@ namespace TechBrain.Communication.Protocols
         public static int MaxParcelSize { get; set; } = 30;
 
         public static int OwnAddress { get; set; } = 1;
-        public static int RepeatQuantity { get; set; } = 4;
+        public static int RepeatQuantity { get; set; } = 0;
 
         public static IEnumerable<byte> GetParcel_ChangeRepeater(int addr, bool isSetRepeater, bool answerEn = true)
         {
@@ -249,6 +252,16 @@ namespace TechBrain.Communication.Protocols
                     (byte)AvrTbCmdType.sendAnswer
                 };
 
+                Debug.WriteLine($"TbProtocol.GetResponse for {b.ToString()} command...");
+                switch (b)
+                {
+                    case AvrTbCmdType.getAddress:
+                        
+                        break;
+                    case AvrTbCmdType.setClock:
+                        break;
+                }
+
                 if (lst.Count > 1 || b == AvrTbCmdType.getAddress)
                 {
                     lst.AddRange(Encoding.ASCII.GetBytes("OK"));
@@ -298,6 +311,19 @@ namespace TechBrain.Communication.Protocols
             {
                 Debug.WriteLine(ex);
                 return false;
+            }
+        }
+
+        public override bool SetTime(DateTime dt)
+        {
+            using (var client = Driver.OpenClient())
+            {
+                var bt = TbProtocol.GetParcel_SetClock(dt, canAnswer);
+                client.Write(bt);
+                if (!canAnswer)
+                    return true;
+                var addr = WaitResponse(client, TbProtocol.CommonAddr, TbProtocol.ExtractAddressFrom);
+                return true;
             }
         }
     }

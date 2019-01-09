@@ -81,9 +81,9 @@ namespace TechBrain.Entities
                     case DeviceTypes.None:
                         throw new NullReferenceException("Device type is not defined");
                     case DeviceTypes.AVR:
-                        return new TbProtocol(Driver, SerialNumber);
+                        return new TbProtocol(Driver, HasResponse, SerialNumber);
                     case DeviceTypes.ESP_AVR:
-                        return new TbProtocol(Driver);
+                        return new TbProtocol(Driver, HasResponse);
                     case DeviceTypes.ESP:
                         return new EspProtocol(Driver);
                 }
@@ -99,5 +99,12 @@ namespace TechBrain.Entities
             return IsOnline;
         }
 
+        public bool SetTime(DateTime dt)
+        {
+            if (!HasResponse && !HasTime)
+                return false;
+            IsOnline = Protocol.SetTime(dt);
+            return IsOnline;
+        }
     }
 }

@@ -32,5 +32,10 @@ namespace TechBrain.Communication.Protocols
                 return false;
             }
         }
+
+        public override bool SetTime(DateTime dt)
+        {
+            throw new NotSupportedException();
+        }
     }
 }
