@@ -253,16 +253,16 @@ namespace TechBrain.Communication.Protocols
                 };
 
                 Debug.WriteLine($"TbProtocol.GetResponse for {b.ToString()} command...");
+                bool isOk = false;
                 switch (b)
                 {
                     case AvrTbCmdType.getAddress:
-                        
-                        break;
                     case AvrTbCmdType.setClock:
+                        isOk = true;
                         break;
                 }
 
-                if (lst.Count > 1 || b == AvrTbCmdType.getAddress)
+                if (lst.Count > 1 || isOk)
                 {
                     lst.AddRange(Encoding.ASCII.GetBytes("OK"));
                     return lst;
