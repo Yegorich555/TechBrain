@@ -34,7 +34,7 @@ namespace TechBrain.Entities
         {
             if (SourceValue == null)
                 return "null";
-            return Extender.BuildStringSep(".", SourceValue, Divider);
+            return Extender.BuildStringSep(".", (int)SourceValue / Divider, SourceValue % Divider);
         }
     }
 }

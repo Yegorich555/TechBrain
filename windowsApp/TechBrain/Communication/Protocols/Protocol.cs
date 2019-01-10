@@ -15,7 +15,8 @@ namespace TechBrain.Communication.Protocols
         {
             Driver = driver;
         }
-        //bool UpdateSensors(IDriver driver, IList<Sensor> sensors);
+
+        public abstract bool UpdateSensors(IList<Sensor> sensors);
         public abstract bool SetTime(DateTime dt);
         public abstract bool Ping();        
     }

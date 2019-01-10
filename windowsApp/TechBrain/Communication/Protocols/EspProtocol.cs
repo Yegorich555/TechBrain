@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using TechBrain.Communication.Drivers;
+using TechBrain.Entities;
 
 namespace TechBrain.Communication.Protocols
 {
@@ -36,6 +37,11 @@ namespace TechBrain.Communication.Protocols
         public override bool SetTime(DateTime dt)
         {
             throw new NotSupportedException();
+        }
+
+        public override bool UpdateSensors(IList<Sensor> sensors)
+        {
+            throw new NotImplementedException();
         }
     }
 }

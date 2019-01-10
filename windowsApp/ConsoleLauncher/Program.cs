@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using TechBrain;
 using TechBrain.Entities;
+using TechBrain.Extensions;
 using TechBrain.Services;
 
 namespace ConsoleLauncher
@@ -50,9 +52,20 @@ namespace ConsoleLauncher
                        Type = OutputTypes.Pwm,
                    }
                 },
+                Sensors = new List<Sensor>(),
                 ResponseTimeout = 500,
                 IpPort = config.TcpEspPort,
             });
+
+            for (int i = 0; i < 4; ++i)
+            {
+                var sensor = new Sensor()
+                {
+                    SerialNumber = i + 1,
+                    Name = "Sensor " + i + 1,
+                };
+                devices[1].Sensors.Add(sensor);
+            }
 
             var sim = new Simulator(config, devices);
             sim.Start();
@@ -69,6 +82,7 @@ namespace ConsoleLauncher
                 Console.WriteLine("ping Esp: " + devices[0].Ping());
                 Console.WriteLine("ping Esp_Avr: " + devices[1].Ping());
                 Console.WriteLine("time Esp_Avr: " + devices[1].SetTime(DateTime.Now));
+                Console.WriteLine("sensors Esp_Avr: " + devices[1].UpdateSensors() + "=>" + Extender.JoinToString("; ", devices[1].Sensors.Select(v => v.Value)));
                 Thread.Sleep(2000);
             }
         }

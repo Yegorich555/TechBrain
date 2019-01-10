@@ -1,5 +1,8 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Text;
+using TechBrain.Entities;
 
 namespace TechBrain.Extensions
 {
@@ -27,8 +30,8 @@ namespace TechBrain.Extensions
                     foreach (var obj2 in obj as IEnumerable)
                     {
                         str.Append(obj2);
-                        if (separator!=null)
-                        str.Append(separator);
+                        if (separator != null)
+                            str.Append(separator);
                     }
                 }
                 else
@@ -38,7 +41,15 @@ namespace TechBrain.Extensions
                         str.Append(separator);
                 }
             }
+            if (separator != null)
+                str = str.Remove(str.Length - separator.Length, separator.Length);
+
             return str.ToString();
+        }
+
+        public static string JoinToString(string separator, IEnumerable<object> lst)
+        {
+            return InBuildString(lst, separator);
         }
     }
 }

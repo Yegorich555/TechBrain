@@ -26,7 +26,7 @@ namespace TechBrain.Communication.Protocols
 
         public static byte DefaultAddr { get; set; } = 97;
         public static byte CommonAnswerAddr { get; set; } = 98;
-        public static byte CommonAddr { get; set; } = 99;
+        public static byte BroadcastAddr { get; set; } = 99;
 
         public static int MinIndexCmdByte { get; set; } = 2;
         public static int ShiftIndexCmd { get; set; } = 4;
@@ -46,29 +46,29 @@ namespace TechBrain.Communication.Protocols
             return GetParcel((byte)OwnAddress, (byte)addr, (byte)RepeatQuantity, answerEn, TbCommands.ChangeOutput((byte)number, (byte)value));
         }
 
-        public static IEnumerable<byte> GetParcel_GetSensors(int addr, bool answerEn = true)
+        public static IEnumerable<byte> GetParcel_GetSensors(int addr)
         {
-            return GetParcel((byte)OwnAddress, (byte)addr, (byte)RepeatQuantity, answerEn, TbCommands.GetSensors());
+            return GetParcel((byte)OwnAddress, (byte)addr, (byte)RepeatQuantity, true, TbCommands.GetSensors());
         }
 
         public static IEnumerable<byte> GetParcel_GetAddress()
         {
-            return GetParcel((byte)OwnAddress, CommonAddr, (byte)RepeatQuantity, true, TbCommands.GetAddress());
+            return GetParcel((byte)OwnAddress, BroadcastAddr, (byte)RepeatQuantity, true, TbCommands.GetAddress());
         }
 
         public static IEnumerable<byte> GetParcel_SetClock(DateTime dt, bool answerEn = true)
         {
-            return GetParcel((byte)OwnAddress, CommonAddr, (byte)RepeatQuantity, answerEn, TbCommands.SetClock(dt));
+            return GetParcel((byte)OwnAddress, BroadcastAddr, (byte)RepeatQuantity, answerEn, TbCommands.SetClock(dt));
         }
 
         public static IEnumerable<byte> GetParcel_SetClock(int dayOfWeek, int hours, int minutes, bool answerEn = true)
         {
-            return GetParcel((byte)OwnAddress, CommonAddr, (byte)RepeatQuantity, answerEn, TbCommands.SetClock(dayOfWeek, hours, minutes));
+            return GetParcel((byte)OwnAddress, BroadcastAddr, (byte)RepeatQuantity, answerEn, TbCommands.SetClock(dayOfWeek, hours, minutes));
         }
 
         public static IEnumerable<byte> GetParcel_SetAddress(int addr, bool forCommonAddr, bool answerEn = true)
         {
-            return GetParcel((byte)OwnAddress, forCommonAddr ? CommonAddr : DefaultAddr, (byte)RepeatQuantity, answerEn, TbCommands.SetAddress((byte)addr));
+            return GetParcel((byte)OwnAddress, forCommonAddr ? BroadcastAddr : DefaultAddr, (byte)RepeatQuantity, answerEn, TbCommands.SetAddress((byte)addr));
         }
 
         public static byte GetCrc(IEnumerable<byte> str)
@@ -151,7 +151,7 @@ namespace TechBrain.Communication.Protocols
             if (!parcel.IndexExist(i + ShiftIndexCmd))
                 return ($"It's small after CommandByte. Index {i + ShiftIndexCmd} not exists ({i},{ShiftIndexCmd})");
 
-            if (parcel[i - 1] != checkReturnAddr && checkReturnAddr != CommonAddr)
+            if (parcel[i - 1] != checkReturnAddr && checkReturnAddr != BroadcastAddr)
                 return ($"Returning address is not match {checkReturnAddr}");
 
             if (checkAnwserAddress && parcel[i + 1] != CommonAnswerAddr)
@@ -165,7 +165,7 @@ namespace TechBrain.Communication.Protocols
             return null;
         }
 
-        public static IEnumerable<SensorValue> ExtractSensorValues(IList<byte> parcel)
+        public static IList<SensorValue> ExtractSensorValues(IList<byte> parcel)
         {
             if (parcel == null)
                 return null;
@@ -240,10 +240,11 @@ namespace TechBrain.Communication.Protocols
 
         public static IEnumerable<byte> GetResponse(IList<byte> bytes)
         {
-            if (!IsGoodQuality(bytes, CommonAddr, false))
+            if (!IsGoodQuality(bytes, BroadcastAddr, false))
                 return new byte[0];
             var i = bytes.IndexOf(CommandByte);
             var b = (AvrTbCmdType)bytes[i + 3];
+
 
             IEnumerable<byte> GetAnswer()
             {
@@ -252,6 +253,7 @@ namespace TechBrain.Communication.Protocols
                     (byte)AvrTbCmdType.sendAnswer
                 };
 
+
                 Debug.WriteLine($"TbProtocol.GetResponse for {b.ToString()} command...");
                 bool isOk = false;
                 switch (b)
@@ -259,6 +261,17 @@ namespace TechBrain.Communication.Protocols
                     case AvrTbCmdType.getAddress:
                     case AvrTbCmdType.setClock:
                         isOk = true;
+                        break;
+                    case AvrTbCmdType.getSensors:
+                        void addSensor(int value)
+                        {
+                            lst.Add((byte)(value >> 8));
+                            lst.Add((byte)(value & 0xFF));
+                        }
+                        addSensor(105); //10.5
+                        addSensor(231);
+                        addSensor(124);
+                        addSensor(549);
                         break;
                 }
 
@@ -284,12 +297,12 @@ namespace TechBrain.Communication.Protocols
 
         #endregion
 
-        T WaitResponse<T>(IDriverClient client, int addr, Func<IList<byte>, T> extractFunc)
+        T WaitResponse<T>(IDriverClient client, Func<IList<byte>, T> extractFunc, int addr = 0)
         {
             while (true)
             {
                 var parcel = client.Read(TbProtocol.StartByte, TbProtocol.EndByte, TbProtocol.MaxParcelSize);
-                var result = TbProtocol.FindParcel(parcel, addr);
+                var result = TbProtocol.FindParcel(parcel, addr == 0 ? address : addr);
                 if (result != null)
                     return extractFunc(parcel);
             }
@@ -303,7 +316,7 @@ namespace TechBrain.Communication.Protocols
                 {
                     var bt = TbProtocol.GetParcel_GetAddress();
                     client.Write(bt);
-                    var addr = WaitResponse(client, TbProtocol.CommonAddr, TbProtocol.ExtractAddressFrom);
+                    var addr = WaitResponse(client, TbProtocol.ExtractAddressFrom);
                     return true;
                 }
             }
@@ -322,7 +335,22 @@ namespace TechBrain.Communication.Protocols
                 client.Write(bt);
                 if (!canAnswer)
                     return true;
-                var addr = WaitResponse(client, TbProtocol.CommonAddr, TbProtocol.ExtractAddressFrom);
+                var addr = WaitResponse(client, TbProtocol.ExtractAddressFrom);
+                return true;
+            }
+        }
+
+        public override bool UpdateSensors(IList<Sensor> sensors)
+        {
+            using (var client = Driver.OpenClient())
+            {
+                var bt = TbProtocol.GetParcel_GetSensors(address);
+                client.Write(bt);
+                var values = WaitResponse(client, TbProtocol.ExtractSensorValues);
+                var count = Math.Min(values.Count, sensors.Count);
+                for (int i = 0; i < count; ++i)
+                    sensors[i].Value = values[i];
+
                 return true;
             }
         }
