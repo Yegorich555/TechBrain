@@ -260,6 +260,7 @@ namespace TechBrain.Communication.Protocols
                 {
                     case AvrTbCmdType.getAddress:
                     case AvrTbCmdType.setClock:
+                    case AvrTbCmdType.changeOut:
                         isOk = true;
                         break;
                     case AvrTbCmdType.getSensors:
@@ -273,6 +274,7 @@ namespace TechBrain.Communication.Protocols
                         addSensor(124);
                         addSensor(549);
                         break;
+
                 }
 
                 if (lst.Count > 1 || isOk)
@@ -352,6 +354,28 @@ namespace TechBrain.Communication.Protocols
                     sensors[i].Value = values[i];
 
                 return true;
+            }
+        }
+
+        public override void SetOut(int number, int value)
+        {
+            if (number < 0 || number > 10)
+                throw new ArgumentOutOfRangeException("number", $"Number == {number} must be 0..10");
+
+            if (value < 0 || value > 100)
+                throw new ArgumentOutOfRangeException("value", $"Value == {value} must be 0..100");
+
+            using (var client = Driver.OpenClient())
+            {
+                var bt = TbProtocol.GetParcel_ChangeOut(address, number, value, canAnswer);
+                client.Write(bt);
+                if (!canAnswer)
+                    return;
+                var addr = WaitResponse(client, TbProtocol.ExtractAddressFrom);
+                if (addr != address)
+                    throw new InvalidOperationException("Address mismatches {addr} != {address}");
+
+                return;
             }
         }
     }

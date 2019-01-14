@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using TechBrain.Communication.Drivers;
 using TechBrain.Communication.Protocols;
@@ -113,6 +114,27 @@ namespace TechBrain.Entities
                 return false;
             IsOnline = Protocol.UpdateSensors(Sensors);
             return IsOnline;
+        }
+
+        public bool SetOut(int num, int value)
+        {
+            if (!HasResponse || Outputs == null || Outputs.Count < 1)
+                return false;
+            if (Outputs.Count > num || num < 0)
+                return false;
+            if (value > 1 && value < 100) //for value can be 1 for digit
+            {
+                if (num == 0 && Outputs.Any(a => a.Type != OutputTypes.Pwm)) //that's for all outputs
+                    return false;
+                else if (Outputs[num - 1].Type != OutputTypes.Pwm)
+                    return false;
+            }
+
+            // IsOnline = Protocol
+            Protocol.SetOut(num, value);
+            IsOnline = true;
+            
+            return true;
         }
     }
 }

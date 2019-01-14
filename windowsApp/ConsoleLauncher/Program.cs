@@ -49,7 +49,7 @@ namespace ConsoleLauncher
                    {
                        SerialNumber = 1,
                        Name = "TestOut1",
-                       Type = OutputTypes.Pwm,
+                       Type = OutputTypes.Digital,
                    }
                 },
                 Sensors = new List<Sensor>(),
@@ -83,6 +83,8 @@ namespace ConsoleLauncher
                 Console.WriteLine("ping Esp_Avr: " + devices[1].Ping());
                 Console.WriteLine("time Esp_Avr: " + devices[1].SetTime(DateTime.Now));
                 Console.WriteLine("sensors Esp_Avr: " + devices[1].UpdateSensors() + "=>" + Extender.JoinToString("; ", devices[1].Sensors.Select(v => v.Value)));
+                Console.WriteLine("outputs Esp: " + devices[0].SetOut(1, 23));
+                Console.WriteLine("outputs Esp_Avr: " + devices[1].SetOut(1, 100));
                 Thread.Sleep(2000);
             }
         }
