@@ -20,5 +20,6 @@ namespace TechBrain.Communication.Protocols
         public abstract bool SetTime(DateTime dt);
         public abstract bool Ping();
         public abstract void SetOut(int number, int value);        
+        public abstract void Sleep(TimeSpan time);
     }
 }

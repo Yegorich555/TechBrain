@@ -27,7 +27,9 @@ namespace TechBrain.Communication.Drivers
                 SendTimeout = ResponseTimeout / 2,
                 ReceiveTimeout = ResponseTimeout / 2
             };
-            client.Connect(ipAddress, ipPort);
+            client.Connect(ipAddress, ipPort); 
+            //todo Add handling timeout connection exception
+            //if (!client.ConnectAsync("remotehost", remotePort).Wait(client.SendTimeout))
             return new Client(client, ResponseTimeout);
         }
 

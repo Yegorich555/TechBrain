@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
 using System.Threading;
 using TechBrain;
 using TechBrain.Entities;
@@ -20,7 +21,7 @@ namespace ConsoleLauncher
                 SerialNumber = 1,
                 HasSleep = true,
                 HasResponse = true,
-                HasTime = true,
+                HasTime = false,
                 Name = "FirstESP",
                 Type = DeviceTypes.ESP,
                 Outputs = new List<DeviceOutput>()
@@ -85,6 +86,8 @@ namespace ConsoleLauncher
                 Console.WriteLine("sensors Esp_Avr: " + devices[1].UpdateSensors() + "=>" + Extender.JoinToString("; ", devices[1].Sensors.Select(v => v.Value)));
                 Console.WriteLine("outputs Esp: " + devices[0].SetOut(1, 23));
                 Console.WriteLine("outputs Esp_Avr: " + devices[1].SetOut(1, 100));
+                Console.WriteLine("sleep Esp: " + devices[0].Sleep(TimeSpan.FromSeconds(10)));
+                Console.WriteLine("sleep Esp_Avr: " + devices[1].Sleep(TimeSpan.FromSeconds(40)));
                 Thread.Sleep(2000);
             }
         }

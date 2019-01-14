@@ -54,7 +54,8 @@ namespace ConsoleLauncher
                     if (str.Contains("esp_"))
                     {
                         var result = (str.Contains("esp_") ? "OK: " : "Error: ") + str.Replace("esp_", "") + '\n';
-                        stream.Write(Encoding.ASCII.GetBytes(result));
+                        if (!str.Contains("sleep"))
+                            stream.Write(Encoding.ASCII.GetBytes(result));
                         Debug.WriteLine($"Simulator get: '{str}'");
                     }
                     else

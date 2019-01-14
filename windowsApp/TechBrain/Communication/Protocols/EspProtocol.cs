@@ -52,6 +52,20 @@ namespace TechBrain.Communication.Protocols
             throw new NotSupportedException();
         }
 
+        public override void Sleep(TimeSpan time)
+        {
+            if (time.TotalSeconds < 10 || time.TotalMinutes > 70)
+                throw new ArgumentOutOfRangeException("time", "time must be 10sec...70min");
+
+            using (var client = Driver.OpenClient())
+            {
+                var cmd = $"sleep({Convert.ToInt16(time.TotalSeconds)})";
+                client.Write($"esp_{cmd}\n");
+            }
+            //if (Ping())
+            //    throw new InvalidOperationException("Sleep failed. Device respondes Ping after sleep command");
+        }
+
         public override bool UpdateSensors(IList<Sensor> sensors)
         {
             throw new NotImplementedException();

@@ -133,8 +133,28 @@ namespace TechBrain.Entities
             // IsOnline = Protocol
             Protocol.SetOut(num, value);
             IsOnline = true;
-            
+
             return true;
+        }
+
+        public bool Sleep(TimeSpan time)
+        {
+            if (!HasSleep)
+                return false;
+
+            if (Type == DeviceTypes.ESP || Type == DeviceTypes.ESP_AVR)
+            {
+                var driver = new TcpDriver(IpAddress, (int)IpPort)
+                {
+                    ResponseTimeout = ResponseTimeout,
+                };
+                var protocol = new EspProtocol(driver);
+                protocol.Sleep(time);
+                //todo store end sleepTimeSpan
+                return true;
+            }
+
+            return false;
         }
     }
 }

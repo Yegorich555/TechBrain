@@ -378,5 +378,10 @@ namespace TechBrain.Communication.Protocols
                 return;
             }
         }
+
+        public override void Sleep(TimeSpan time)
+        {
+            throw new NotSupportedException();
+        }
     }
 }
