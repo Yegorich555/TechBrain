@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
@@ -14,8 +15,11 @@ namespace ConsoleLauncher
     {
         static Config config = new Config();
         static List<Device> devices = new List<Device>();
+
         static void Main(string[] args)
         {
+            Debug.Listeners.Add(new TextWriterTraceListener(Console.Out));
+
             devices.Add(new Device()
             {
                 SerialNumber = 1,

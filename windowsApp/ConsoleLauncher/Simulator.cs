@@ -49,19 +49,19 @@ namespace ConsoleLauncher
                     Thread.Sleep(20);
                     var buf = new byte[255];
                     var count = stream.Read(buf, 0, buf.Length);
+                    var bytes = buf.Take(count).ToArray();
 
-                    var str = Encoding.ASCII.GetString(buf);
+                    var str = Encoding.ASCII.GetString(bytes);
                     if (str.Contains("esp_"))
                     {
                         var result = (str.Contains("esp_") ? "OK: " : "Error: ") + str.Replace("esp_", "") + '\n';
                         if (!str.Contains("sleep"))
                             stream.Write(Encoding.ASCII.GetBytes(result));
-                        Debug.WriteLine($"Simulator get: '{str}'");
+                        Debug.WriteLine($"Simulator get: '{str.Replace("\n", "/n")}'");
                     }
                     else
                     {
-                        var bytes = buf.Take(count);
-                        var address = TbProtocol.ExtractAddressFrom(buf);
+                        var address = TbProtocol.ExtractAddressFrom(bytes);
                         Debug.WriteLine($"Simulator get from '{address}'");
                         var bt = TbProtocol.GetResponse(bytes.ToList());
                         stream.Write(bt.ToArray());
