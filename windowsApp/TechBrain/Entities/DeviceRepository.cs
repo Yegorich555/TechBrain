@@ -1,15 +1,32 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using TechBrain.IO;
 
 namespace TechBrain.Entities
 {
     public class DeviceRepository
     {
+        string _path;
         object _lockObj = new object();
         List<Device> lst;
-        public DeviceRepository() => lst = new List<Device>();
-        public DeviceRepository(IEnumerable<Device> devices) => lst = new List<Device>(devices);
+
+        public DeviceRepository(string path)
+        {
+            _path = path;
+            if (FileSystem.ExistPath(path))
+            {
+                var text = File.ReadAllText(path);
+                lst = JsonConvert.DeserializeObject<List<Device>>(path);
+            }
+        }
+        public DeviceRepository(string path, IEnumerable<Device> devices)
+        {
+            _path = path;
+            lst = new List<Device>(devices);
+        }
 
         public Device this[int index]
         {
@@ -25,9 +42,36 @@ namespace TechBrain.Entities
             }
         }
 
-        public int Add(Device device)
+        T ChangeAction<T>(Func<T> action)
         {
             lock (_lockObj)
+            {
+                var v = action();
+                BaseCommit();
+                return v;
+            }
+        }
+
+        void BaseCommit()
+        {
+            var settings = new JsonSerializerSettings()
+            {
+                Formatting = Formatting.Indented,
+                NullValueHandling = NullValueHandling.Ignore,
+            };
+            var json = JsonConvert.SerializeObject(lst, settings);
+            File.WriteAllText(_path, json);
+        }
+
+        public void Commit()
+        {
+            lock (_lockObj)
+                BaseCommit();
+        }
+
+        public int Add(Device device)
+        {
+            return ChangeAction(() =>
             {
                 var id = device.Id;
                 if (id == 0 || lst.Any(a => a.Id == id))
@@ -38,14 +82,17 @@ namespace TechBrain.Entities
                 device.Id = id;
                 lst.Add(device);
                 return id;
-            }
+            });
         }
 
         public void Remove(int id)
         {
-            lock (_lockObj)
-                lst.Remove(lst.First(a => a.Id == id));
+            ChangeAction(() =>
+            {
+                return lst.Remove(lst.First(a => a.Id == id));
+            });
         }
+
 
         public List<Device> GetAll()
         {

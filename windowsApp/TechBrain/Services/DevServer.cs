@@ -1,16 +1,11 @@
-﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Concurrent;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using TechBrain.Entities;
 using TechBrain.Extensions;
-using TechBrain.IO;
 
 namespace TechBrain.Services
 {
@@ -20,22 +15,20 @@ namespace TechBrain.Services
         public DeviceRepository DeviceRepository;
 
         Config _config;
-        TcpServer _tcpServer;        
+        TcpServer _tcpServer;
 
-        public DevServer(Config config, IEnumerable<Device> devices): this(config)
-        {            
-            DeviceRepository = new DeviceRepository(devices);
+        public DevServer(Config config, IEnumerable<Device> devices) : this(config)
+        {
+            DeviceRepository = new DeviceRepository(config.PathDevices, devices);
+            DeviceRepository.Commit();
         }
 
         public DevServer(Config config)
         {
             _config = config;
-            if (DeviceRepository != null && FileSystem.ExistPath(config.PathDevices))
-            {
-                var text = File.ReadAllText(config.PathDevices);
-                var devices = JsonConvert.DeserializeObject<List<Device>>(text);
-                DeviceRepository = new DeviceRepository(devices);
-            }
+            if (DeviceRepository != null)
+                DeviceRepository = new DeviceRepository(config.PathDevices);
+            
         }
 
         public void Start()
@@ -58,13 +51,6 @@ namespace TechBrain.Services
                 _tcpServer.Stop();
                 _tcpServer.GotNewClient -= GotNewClient;
             }
-            var settings = new JsonSerializerSettings()
-            {
-                Formatting = Formatting.Indented,
-                NullValueHandling = NullValueHandling.Ignore,
-            };
-            var json = JsonConvert.SerializeObject(DeviceRepository.GetAll(), settings);
-            File.WriteAllText(_config.PathDevices, json);
         }
 
         void GotNewClient(object sender, TcpClient client)
