@@ -36,8 +36,14 @@ namespace TechBrain.Services
                 server.Start();
                 while (_localRunThread)
                 {
+                    lock (_runThreadLock)
+                    {
+                        _localRunThread = _runThread;
+                    }
                     try
                     {
+                        if (!server.Pending())
+                            continue;
                         var client = server.AcceptTcpClient();
                         Task.Run(() =>
                         {
@@ -60,13 +66,7 @@ namespace TechBrain.Services
                         Debug.WriteLine("TcpServer.Listen(). " + ex);
                         ErrorLog?.Invoke(this, ex.ToString());
                     }
-
-                    lock (_runThreadLock)
-                    {
-                        _localRunThread = _runThread;
-                    }
                 }
-
                 server.Stop();
             });
 

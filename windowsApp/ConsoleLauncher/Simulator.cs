@@ -98,5 +98,63 @@ namespace ConsoleLauncher
                 Debug.WriteLine(ex);
             }
         }
+
+        public static List<Device> GenerateNewDevices(Config config)
+        {
+            var lst = new List<Device>();
+            lst.Add(new Device()
+            {
+                SerialNumber = 1,
+                HasSleep = true,
+                HasResponse = true,
+                HasTime = false,
+                Name = "FirstESP",
+                Type = DeviceTypes.ESP,
+                Outputs = new List<DeviceOutput>()
+                {
+                   new DeviceOutput()
+                   {
+                       SerialNumber = 1,
+                       Name = "TestOut1",
+                       Type = OutputTypes.Pwm,
+                   }
+                },
+                ResponseTimeout = 2000,
+                IpPort = config.TcpEspPort,
+            });
+            lst.Add(new Device()
+            {
+                SerialNumber = 2,
+                HasSleep = true,
+                HasResponse = true,
+                HasTime = true,
+                Name = "FirstESP_AVR",
+                Type = DeviceTypes.ESP_AVR,
+                Outputs = new List<DeviceOutput>()
+                {
+                    new DeviceOutput()
+                   {
+                       SerialNumber = 1,
+                       Name = "TestOut1",
+                       Type = OutputTypes.Digital,
+                   }
+                },
+                Sensors = new List<Sensor>(),
+                ResponseTimeout = 5000,
+                IpPort = config.TcpEspPort,
+            });
+
+            for (int i = 0; i < 4; ++i)
+            {
+                var sensor = new Sensor()
+                {
+                    SerialNumber = i + 1,
+                    Name = "Sensor " + i + 1,
+                };
+                lst[1].Sensors.Add(sensor);
+            }
+
+            return lst;
+        }
     }
 }

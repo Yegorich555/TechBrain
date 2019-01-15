@@ -13,5 +13,6 @@ namespace TechBrain
         public int TcpEspPort { get; private set; } = 1999;//80;
 
         public string ComPort { get; private set; } = "COM3";
+        public string PathDevices { get; private set; } = "devices.json";
     }
 }

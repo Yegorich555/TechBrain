@@ -14,76 +14,29 @@ namespace ConsoleLauncher
     class Program
     {
         static Config config = new Config();
-        static List<Device> devices = new List<Device>();
 
         static void Main(string[] args)
         {
             Debug.Listeners.Add(new TextWriterTraceListener(Console.Out));
 
-            devices.Add(new Device()
-            {
-                SerialNumber = 1,
-                HasSleep = true,
-                HasResponse = true,
-                HasTime = false,
-                Name = "FirstESP",
-                Type = DeviceTypes.ESP,
-                Outputs = new List<DeviceOutput>()
-                {
-                   new DeviceOutput()
-                   {
-                       SerialNumber = 1,
-                       Name = "TestOut1",
-                       Type = OutputTypes.Pwm,
-                   }
-                },
-                ResponseTimeout = 200,
-                IpPort = config.TcpEspPort,
-            });
-            devices.Add(new Device()
-            {
-                SerialNumber = 2,
-                HasSleep = true,
-                HasResponse = true,
-                HasTime = true,
-                Name = "FirstESP_AVR",
-                Type = DeviceTypes.ESP_AVR,
-                Outputs = new List<DeviceOutput>()
-                {
-                    new DeviceOutput()
-                   {
-                       SerialNumber = 1,
-                       Name = "TestOut1",
-                       Type = OutputTypes.Digital,
-                   }
-                },
-                Sensors = new List<Sensor>(),
-                ResponseTimeout = 500,
-                IpPort = config.TcpEspPort,
-            });
-
-            for (int i = 0; i < 4; ++i)
-            {
-                var sensor = new Sensor()
-                {
-                    SerialNumber = i + 1,
-                    Name = "Sensor " + i + 1,
-                };
-                devices[1].Sensors.Add(sensor);
-            }
-
-            var sim = new Simulator(config, devices);
-            sim.Start();
-
-            var devServer = new DevServer(config, devices);
-            devServer.ErrorLog += (object s, string e) => Console.WriteLine(e);
+            var devServer = new DevServer(config);
+            if (devServer.Devices == null)
+                devServer = new DevServer(config, Simulator.GenerateNewDevices(config));
             devServer.Start();
 
-            Thread.Sleep(20);
-            sim.EspSend(devices[0].SerialNumber);
-            sim.EspSend(devices[1].SerialNumber);
+            var sim = new Simulator(config, devServer.Devices.ToList());
+            sim.Start();
+
+            devServer.Stop();
+            devServer.Start();
+
+            Thread.Sleep(100);
+
+            var devices = devServer.Devices.ToList();
             while (true)
             {
+                sim.EspSend(devices[0].SerialNumber);
+                sim.EspSend(devices[1].SerialNumber);
                 Console.WriteLine("ping Esp: " + devices[0].Ping());
                 Console.WriteLine("ping Esp_Avr: " + devices[1].Ping());
                 Console.WriteLine("time Esp_Avr: " + devices[1].SetTime(DateTime.Now));

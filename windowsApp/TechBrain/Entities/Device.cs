@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +9,7 @@ using TechBrain.Communication.Protocols;
 
 namespace TechBrain.Entities
 {
+    [JsonConverter(typeof(StringEnumConverter))] 
     public enum DeviceTypes
     {
         None,
@@ -51,6 +53,7 @@ namespace TechBrain.Entities
 
         public DeviceTypes Type { get; set; }
 
+        [JsonIgnore]
         public IDriver Driver
         {
             get

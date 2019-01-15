@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace TechBrain.Extensions
 {
@@ -67,6 +65,8 @@ namespace TechBrain.Extensions
                         break;
                 }
             }
+            Debug.WriteLine("TcpClient ReadTime: " + sw.ElapsedMilliseconds);
+
             return bytes.Take(i).ToArray();
         }
 
@@ -75,7 +75,7 @@ namespace TechBrain.Extensions
             try
             {
                 var stream = client.GetStream();
-                return stream.Read(startByte, endByte, maxParcelSize);
+                return Read(stream, startByte, endByte, maxParcelSize);
             }
             catch (TimeoutException ex)
             {
@@ -105,7 +105,10 @@ namespace TechBrain.Extensions
 
                 var str = ReadLine(client);
                 if (str.IndexOf(waitStr) != -1)
+                {
+                    Debug.WriteLine("TcpClient ReadTime: " + sw.ElapsedMilliseconds);
                     return str;
+                }
             }
 
         }

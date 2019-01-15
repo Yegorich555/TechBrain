@@ -1,13 +1,16 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using TechBrain.Entities;
 using TechBrain.Extensions;
+using TechBrain.IO;
 
 namespace TechBrain.Services
 {
@@ -17,11 +20,22 @@ namespace TechBrain.Services
         public ConcurrentBag<Device> Devices;
 
         Config _config;
-        TcpServer _tcpServer;
-        public DevServer(Config config, IList<Device> devices)
+        TcpServer _tcpServer;        
+
+        public DevServer(Config config, IList<Device> devices): this(config)
+        {            
+            Devices = new ConcurrentBag<Device>(devices);
+        }
+
+        public DevServer(Config config)
         {
             _config = config;
-            Devices = new ConcurrentBag<Device>(devices);
+            if (Devices != null && FileSystem.ExistPath(config.PathDevices))
+            {
+                var text = File.ReadAllText(config.PathDevices);
+                var devices = JsonConvert.DeserializeObject<List<Device>>(text);
+                Devices = new ConcurrentBag<Device>(devices);
+            }
         }
 
         public void Start()
@@ -44,6 +58,13 @@ namespace TechBrain.Services
                 _tcpServer.Stop();
                 _tcpServer.GotNewClient -= GotNewClient;
             }
+            var settings = new JsonSerializerSettings()
+            {
+                Formatting = Formatting.Indented,
+                NullValueHandling = NullValueHandling.Ignore,
+            };
+            var json = JsonConvert.SerializeObject(Devices, settings);
+            File.WriteAllText(_config.PathDevices, json);
         }
 
         void GotNewClient(object sender, TcpClient client)
