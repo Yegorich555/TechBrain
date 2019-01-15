@@ -17,24 +17,24 @@ namespace TechBrain.Services
     public class DevServer : IDisposable
     {
         public event EventHandler<string> ErrorLog;
-        public ConcurrentBag<Device> Devices;
+        public DeviceRepository DeviceRepository;
 
         Config _config;
         TcpServer _tcpServer;        
 
-        public DevServer(Config config, IList<Device> devices): this(config)
+        public DevServer(Config config, IEnumerable<Device> devices): this(config)
         {            
-            Devices = new ConcurrentBag<Device>(devices);
+            DeviceRepository = new DeviceRepository(devices);
         }
 
         public DevServer(Config config)
         {
             _config = config;
-            if (Devices != null && FileSystem.ExistPath(config.PathDevices))
+            if (DeviceRepository != null && FileSystem.ExistPath(config.PathDevices))
             {
                 var text = File.ReadAllText(config.PathDevices);
                 var devices = JsonConvert.DeserializeObject<List<Device>>(text);
-                Devices = new ConcurrentBag<Device>(devices);
+                DeviceRepository = new DeviceRepository(devices);
             }
         }
 
@@ -63,7 +63,7 @@ namespace TechBrain.Services
                 Formatting = Formatting.Indented,
                 NullValueHandling = NullValueHandling.Ignore,
             };
-            var json = JsonConvert.SerializeObject(Devices, settings);
+            var json = JsonConvert.SerializeObject(DeviceRepository.GetAll(), settings);
             File.WriteAllText(_config.PathDevices, json);
         }
 
@@ -99,7 +99,7 @@ namespace TechBrain.Services
 
         void AddOrUpdate(IPAddress IpAddress, int SerialNumber)
         {
-            var item = Devices.FirstOrDefault(v => v.SerialNumber == SerialNumber);
+            var item = DeviceRepository.Get(v => v.Id == SerialNumber);
             if (item != null)
             {
                 item.IpAddress = IpAddress;
@@ -107,7 +107,7 @@ namespace TechBrain.Services
             }
             else
             {
-                Devices.Add(new Device()
+                DeviceRepository.Add(new Device()
                 {
                     Type = DeviceTypes.ESP,
                     HasResponse = true,
@@ -129,7 +129,7 @@ namespace TechBrain.Services
                 if (disposing)
                 {
                 }
-                Devices = null;
+                DeviceRepository = null;
                 Stop();
                 disposedValue = true;
                 _config = null;

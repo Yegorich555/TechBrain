@@ -104,6 +104,7 @@ namespace ConsoleLauncher
             var lst = new List<Device>();
             lst.Add(new Device()
             {
+                Id = 1,
                 SerialNumber = 1,
                 HasSleep = true,
                 HasResponse = true,
@@ -114,7 +115,7 @@ namespace ConsoleLauncher
                 {
                    new DeviceOutput()
                    {
-                       SerialNumber = 1,
+                       Id = 1,
                        Name = "TestOut1",
                        Type = OutputTypes.Pwm,
                    }
@@ -124,6 +125,7 @@ namespace ConsoleLauncher
             });
             lst.Add(new Device()
             {
+                Id = 2,
                 SerialNumber = 2,
                 HasSleep = true,
                 HasResponse = true,
@@ -134,7 +136,7 @@ namespace ConsoleLauncher
                 {
                     new DeviceOutput()
                    {
-                       SerialNumber = 1,
+                       Id = 1,
                        Name = "TestOut1",
                        Type = OutputTypes.Digital,
                    }
@@ -148,7 +150,7 @@ namespace ConsoleLauncher
             {
                 var sensor = new Sensor()
                 {
-                    SerialNumber = i + 1,
+                    Id = i + 1,
                     Name = "Sensor " + i + 1,
                 };
                 lst[1].Sensors.Add(sensor);

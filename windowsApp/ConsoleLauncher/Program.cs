@@ -20,11 +20,12 @@ namespace ConsoleLauncher
             Debug.Listeners.Add(new TextWriterTraceListener(Console.Out));
 
             var devServer = new DevServer(config);
-            if (devServer.Devices == null)
+            if (devServer.DeviceRepository == null)
                 devServer = new DevServer(config, Simulator.GenerateNewDevices(config));
             devServer.Start();
 
-            var sim = new Simulator(config, devServer.Devices.ToList());
+            var devices = devServer.DeviceRepository.GetAll();
+            var sim = new Simulator(config, devices);
             sim.Start();
 
             devServer.Stop();
@@ -32,7 +33,6 @@ namespace ConsoleLauncher
 
             Thread.Sleep(100);
 
-            var devices = devServer.Devices.ToList();
             while (true)
             {
                 sim.EspSend(devices[0].SerialNumber);

@@ -9,7 +9,7 @@ using TechBrain.Communication.Protocols;
 
 namespace TechBrain.Entities
 {
-    [JsonConverter(typeof(StringEnumConverter))] 
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum DeviceTypes
     {
         None,
@@ -19,24 +19,25 @@ namespace TechBrain.Entities
     }
     public class Device : IEntity
     {
+        public int Id { get; set; }
         public int SerialNumber { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
 
-        bool isOnline;
-        public bool IsOnline
+        bool? isOnline;
+        public bool? IsOnline
         {
-            get { return isOnline; }
+            get { return HasResponse ? isOnline : null; }
             set
             {
                 isOnline = value;
-                if (isOnline)
+                if (isOnline == true)
                     IsOnlineDate = DateTime.Now;
             }
 
         }
 
-        public DateTime IsOnlineDate { get; private set; }
+        public DateTime? IsOnlineDate { get; private set; }
         public IList<Sensor> Sensors { get; set; }
         public IList<DeviceOutput> Outputs { get; set; }
         public virtual bool HasTime { get; set; }
@@ -85,7 +86,7 @@ namespace TechBrain.Entities
                     case DeviceTypes.None:
                         throw new NullReferenceException("Device type is not defined");
                     case DeviceTypes.AVR:
-                        return new TbProtocol(Driver, HasResponse, SerialNumber); //todo use TbProtocol.Address instead of SerialNumber
+                        return new TbProtocol(Driver, HasResponse, Id); //todo use TbProtocol.Address instead of SerialNumber
                     case DeviceTypes.ESP_AVR:
                         return new TbProtocol(Driver, HasResponse, TbProtocol.BroadcastAddr);
                     case DeviceTypes.ESP:
@@ -100,7 +101,7 @@ namespace TechBrain.Entities
             if (!HasResponse)
                 return false;
             IsOnline = Protocol.Ping();
-            return IsOnline;
+            return IsOnline == true;
         }
 
         public bool SetTime(DateTime dt)
@@ -108,7 +109,7 @@ namespace TechBrain.Entities
             if (!HasResponse && !HasTime)
                 return false;
             IsOnline = Protocol.SetTime(dt);
-            return IsOnline;
+            return true;
         }
 
         public bool UpdateSensors()
@@ -116,7 +117,7 @@ namespace TechBrain.Entities
             if (!HasResponse || Sensors == null || Sensors.Count < 1) //todo maybe create sensors list
                 return false;
             IsOnline = Protocol.UpdateSensors(Sensors);
-            return IsOnline;
+            return true;
         }
 
         public bool SetOut(int num, int value)

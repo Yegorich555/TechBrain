@@ -13,7 +13,7 @@ namespace TechBrain.Entities
 
     public class DeviceOutput: IEntity
     {
-        public int SerialNumber { get; set; }
+        public int Id { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
 
@@ -22,7 +22,7 @@ namespace TechBrain.Entities
 
         public override string ToString()
         {
-            return SerialNumber + "-" + Name + ": " + Value?.ToString();
+            return Id + "-" + Name + ": " + Value?.ToString();
         }
     }
 }
