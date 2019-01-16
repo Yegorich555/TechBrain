@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using TechBrain.Communication.Drivers;
 using TechBrain.Communication.Protocols;
+using TechBrain.Extensions;
 
 namespace TechBrain.Entities
 {
@@ -25,9 +26,12 @@ namespace TechBrain.Entities
         public string Description { get; set; }
 
         bool? isOnline;
-        public bool? IsOnline
+        public bool? IsOnline //todo ignore from saving into json file
         {
-            get { return HasResponse ? isOnline : null; }
+            get
+            {
+                return HasResponse ? isOnline : null;
+            }
             set
             {
                 isOnline = value;
@@ -38,8 +42,8 @@ namespace TechBrain.Entities
         }
 
         public DateTime? IsOnlineDate { get; private set; }
-        public IList<Sensor> Sensors { get; set; }
-        public IList<DeviceOutput> Outputs { get; set; }
+        public List<Sensor> Sensors { get; set; }
+        public List<DeviceOutput> Outputs { get; set; }
         public virtual bool HasTime { get; set; }
         public virtual bool HasSleep { get; set; } = true;
         public virtual bool HasResponse { get; set; } = true;
@@ -96,6 +100,14 @@ namespace TechBrain.Entities
             }
         }
 
+
+        void BaseCommand(Action action)
+        {
+            action();
+            if (HasResponse)
+                IsOnline = true;
+        }
+
         public bool Ping()
         {
             if (!HasResponse)
@@ -104,47 +116,53 @@ namespace TechBrain.Entities
             return IsOnline == true;
         }
 
-        public bool SetTime(DateTime dt)
+        public void SetTime(DateTime dt)
         {
-            if (!HasResponse && !HasTime)
-                return false;
-            IsOnline = Protocol.SetTime(dt);
-            return true;
+            if (!HasTime)
+                throw new DeviceException("Device does not support Time command");
+            BaseCommand(() => Protocol.SetTime(dt));
         }
 
-        public bool UpdateSensors()
+        public void UpdateSensors()
         {
-            if (!HasResponse || Sensors == null || Sensors.Count < 1) //todo maybe create sensors list
-                return false;
-            IsOnline = Protocol.UpdateSensors(Sensors);
-            return true;
+            if (!HasResponse)
+                throw new DeviceException("Device does not support Reponse");
+            if (Sensors == null || Sensors.Count < 1)
+                throw new DeviceException("Device has not Sensors");
+
+            BaseCommand(() => Protocol.UpdateSensors(Sensors));
         }
 
-        public bool SetOut(int num, int value)
+        public void SetOut(int num, int value) //num == 0 for all outs
         {
-            if (!HasResponse || Outputs == null || Outputs.Count < 1)
-                return false;
+            if (Outputs == null || Outputs.Count < 1)
+                throw new DeviceException("Device has not Outputs");
             if (Outputs.Count > num || num < 0)
-                return false;
-            if (value > 1 && value < 100) //for value can be 1 for digit
+                throw new DeviceException($"Device has not Output {num}");
+            if (value > 1 && value < 100) //only 0, 1 or 100 for value digit
             {
-                if (num == 0 && Outputs.Any(a => a.Type != OutputTypes.Pwm)) //that's for all outputs
-                    return false;
-                else if (Outputs[num - 1].Type != OutputTypes.Pwm)
-                    return false;
+                var i = num == 0 ? 0 : num - 1;
+                var cnt = num == 0 ? Outputs.Count : i + 1;
+                for (; i < cnt; ++i)
+                {
+                    var output = Outputs[i];
+                    if (output.Type != OutputTypes.Pwm)
+                        throw new DeviceException($"Device Output {num} is {output.Type.ToString()} and is not PWM. Output can't take value {value}");
+                }
             }
 
-            // IsOnline = Protocol
-            Protocol.SetOut(num, value);
-            IsOnline = true;
-
-            return true;
+            BaseCommand(() => Protocol.SetOut(num, value));
+            if (num == 0)
+                Outputs.ForEach(a => a.Value = value);
+            else
+                Outputs[num - 1].Value = value; //todo not always is actually
         }
 
-        public bool Sleep(TimeSpan time)
+
+        public void Sleep(TimeSpan time)
         {
             if (!HasSleep)
-                return false;
+                throw new DeviceException($"Device doesn't support Sleep");
 
             if (Type == DeviceTypes.ESP || Type == DeviceTypes.ESP_AVR)
             {
@@ -154,11 +172,11 @@ namespace TechBrain.Entities
                 };
                 var protocol = new EspProtocol(driver);
                 protocol.Sleep(time);
-                //todo store end sleepTimeSpan
-                return true;
             }
+            else
+                Protocol.Sleep(time);
 
-            return false;
+            //todo store end sleepTimeSpan
         }
     }
 }

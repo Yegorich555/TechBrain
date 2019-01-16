@@ -18,7 +18,7 @@ namespace TechBrain.Entities
         public string Description { get; set; }
 
         public OutputTypes Type { get; set; }
-        public int? Value { get; private set; }
+        public int? Value { get; internal set; }
 
         public override string ToString()
         {
