@@ -1,8 +1,11 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using TechBrain.Extensions;
 using TechBrain.IO;
 
 namespace TechBrain.Entities
@@ -19,13 +22,32 @@ namespace TechBrain.Entities
             if (FileSystem.ExistPath(path))
             {
                 var text = File.ReadAllText(path);
-                lst = JsonConvert.DeserializeObject<List<Device>>(path);
+                lst = JsonConvert.DeserializeObject<List<Device>>(text, SerializerSettings);
             }
+            else
+                lst = new List<Device>();
         }
         public DeviceRepository(string path, IEnumerable<Device> devices)
         {
             _path = path;
             lst = new List<Device>(devices);
+        }
+
+        public int Count { get => lst.Count; }
+
+        public static JsonSerializerSettings SerializerSettings
+        {
+            get
+            {
+                var settings = new JsonSerializerSettings()
+                {
+                    Formatting = Formatting.Indented,
+                    NullValueHandling = NullValueHandling.Ignore,
+                    //ContractResolver = new RepositoryContractResolver()
+                };
+                settings.Converters.Add(new IPAddressConverter());
+                return settings;
+            }
         }
 
         public Device this[int index]
@@ -54,12 +76,7 @@ namespace TechBrain.Entities
 
         void BaseCommit()
         {
-            var settings = new JsonSerializerSettings()
-            {
-                Formatting = Formatting.Indented,
-                NullValueHandling = NullValueHandling.Ignore,
-            };
-            var json = JsonConvert.SerializeObject(lst, settings);
+            var json = JsonConvert.SerializeObject(lst, SerializerSettings);
             File.WriteAllText(_path, json);
         }
 
@@ -110,6 +127,20 @@ namespace TechBrain.Entities
         {
             lock (_lockObj)
                 return lst.FirstOrDefault(predicate);
+        }
+    }
+
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false)]
+    public class SaveIgnoreAttribute : Attribute
+    { }
+
+    public class RepositoryContractResolver : DefaultContractResolver
+    {
+        protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
+        {
+            var property = base.CreateProperty(member, memberSerialization);
+            property.Ignored = property.Ignored || member.GetCustomAttribute<SaveIgnoreAttribute>() != null;
+            return property;
         }
     }
 }

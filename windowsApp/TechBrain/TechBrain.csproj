@@ -65,6 +65,7 @@
     <Compile Include="Extensions\CollectionExtensions.cs" />
     <Compile Include="Extensions\DeviceException.cs" />
     <Compile Include="Extensions\Extender.cs" />
+    <Compile Include="Extensions\IPAddressConverter.cs" />
     <Compile Include="Extensions\msg.cs" />
     <Compile Include="Extensions\ObjectExtensions.cs" />
     <Compile Include="Extensions\StreamSocketExtensions.cs" />

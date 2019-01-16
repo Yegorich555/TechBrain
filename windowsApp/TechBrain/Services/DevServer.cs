@@ -12,7 +12,7 @@ namespace TechBrain.Services
     public class DevServer : IDisposable
     {
         public event EventHandler<string> ErrorLog;
-        public DeviceRepository DeviceRepository;
+        public DeviceRepository DeviceRepository { get; set; }
 
         Config _config;
         TcpServer _tcpServer;
@@ -26,7 +26,7 @@ namespace TechBrain.Services
         public DevServer(Config config)
         {
             _config = config;
-            if (DeviceRepository != null)
+            if (DeviceRepository == null)
                 DeviceRepository = new DeviceRepository(config.PathDevices);
             
         }

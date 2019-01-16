@@ -2,7 +2,6 @@
 using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using TechBrain.Communication.Drivers;
 using TechBrain.Communication.Protocols;
