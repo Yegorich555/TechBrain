@@ -329,20 +329,19 @@ namespace TechBrain.Communication.Protocols
             }
         }
 
-        public override bool SetTime(DateTime dt)
+        public override void SetTime(DateTime dt)
         {
             using (var client = Driver.OpenClient())
             {
                 var bt = TbProtocol.GetParcel_SetClock(dt, canAnswer);
                 client.Write(bt);
                 if (!canAnswer)
-                    return true;
+                    return;
                 var addr = WaitResponse(client, TbProtocol.ExtractAddressFrom);
-                return true;
             }
         }
 
-        public override bool UpdateSensors(IList<Sensor> sensors)
+        public override void UpdateSensors(IList<Sensor> sensors)
         {
             using (var client = Driver.OpenClient())
             {
@@ -352,8 +351,6 @@ namespace TechBrain.Communication.Protocols
                 var count = Math.Min(values.Count, sensors.Count);
                 for (int i = 0; i < count; ++i)
                     sensors[i].Value = values[i];
-
-                return true;
             }
         }
 

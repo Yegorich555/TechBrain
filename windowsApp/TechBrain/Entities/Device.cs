@@ -162,7 +162,7 @@ namespace TechBrain.Entities
         public void Sleep(TimeSpan time)
         {
             if (!HasSleep)
-                throw new DeviceException($"Device doesn't support Sleep");
+                throw new DeviceException($"Device does not support Sleep");
 
             if (Type == DeviceTypes.ESP || Type == DeviceTypes.ESP_AVR)
             {
@@ -171,7 +171,7 @@ namespace TechBrain.Entities
                     ResponseTimeout = ResponseTimeout,
                 };
                 var protocol = new EspProtocol(driver);
-                protocol.Sleep(time);
+                BaseCommand(() => protocol.Sleep(time));
             }
             else
                 Protocol.Sleep(time);

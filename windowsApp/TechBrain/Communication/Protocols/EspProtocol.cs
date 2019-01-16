@@ -47,7 +47,7 @@ namespace TechBrain.Communication.Protocols
             }
         }
 
-        public override bool SetTime(DateTime dt)
+        public override void SetTime(DateTime dt)
         {
             throw new NotSupportedException();
         }
@@ -66,7 +66,7 @@ namespace TechBrain.Communication.Protocols
             //    throw new InvalidOperationException("Sleep failed. Device respondes Ping after sleep command");
         }
 
-        public override bool UpdateSensors(IList<Sensor> sensors)
+        public override void UpdateSensors(IList<Sensor> sensors)
         {
             throw new NotImplementedException();
         }
