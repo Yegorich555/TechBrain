@@ -23,7 +23,7 @@ namespace TechBrain.Entities
         public string Description { get; set; }
 
         public SensorTypes Type { get; set; }
-        public SensorValue Value { get; set; }
+        public SensorValue? Value { get; set; }
 
         //todo min and maxValue
 

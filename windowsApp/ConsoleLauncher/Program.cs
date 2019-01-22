@@ -62,7 +62,7 @@ namespace ConsoleLauncher
                     Wrap("ping Esp", () => devices[0].Ping(), () => devices[0].IsOnline.ToStringNull());
                     Wrap("ping Esp_Avr", () => devices[1].Ping(), () => devices[0].IsOnline.ToStringNull());
                     Wrap("time Esp_Avr", () => devices[1].SetTime(DateTime.Now));
-                    Wrap("sensors Esp_Avr", () => devices[1].UpdateSensors(), () => "=>" + Extender.JoinToString("; ", devices[1].Sensors.Select(v => v.Value)));
+                    Wrap("sensors Esp_Avr", () => devices[1].UpdateSensors(), () => "=>" + Extender.JoinToString("; ", devices[1].Sensors.Select(v => v.Value as object)));
                     Wrap("outputs Esp", () => devices[0].SetOut(1, 23));
                     Wrap("outputs Esp_Avr", () => devices[1].SetOut(1, 100));
                     Wrap("sleep Esp", () => devices[0].Sleep(TimeSpan.FromSeconds(10)));
