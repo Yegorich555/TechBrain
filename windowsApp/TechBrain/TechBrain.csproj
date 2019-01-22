@@ -63,6 +63,7 @@
     <Compile Include="Entities\Sensor.cs" />
     <Compile Include="Entities\SensorValue.cs" />
     <Compile Include="Extensions\CollectionExtensions.cs" />
+    <Compile Include="Extensions\DateTimeExtensions.cs" />
     <Compile Include="Extensions\DeviceException.cs" />
     <Compile Include="Extensions\Extender.cs" />
     <Compile Include="Extensions\IPAddressConverter.cs" />

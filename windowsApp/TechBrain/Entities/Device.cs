@@ -35,7 +35,7 @@ namespace TechBrain.Entities
             {
                 isOnline = value;
                 if (isOnline == true)
-                    IsOnlineDate = DateTime.Now;
+                    IsOnlineDate = DateTime.Now.TruncateToSeconds();
             }
 
         }
