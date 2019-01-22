@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using System.IO;
 using TechBrain.IO;
 
@@ -6,12 +6,12 @@ namespace TechBrain
 {
     public class Config
     {
-        public int DevServer_TcpPort { get; private set; } = 1234;
-        public int TcpResponseTimeout { get; private set; } = 1000;
-        public int Esp_TcpPort { get; private set; } = 80;
+        public int DevServer_TcpPort { get; set; } = 1234;
+        public int TcpResponseTimeout { get; set; } = 1000;
+        public int Esp_TcpPort { get; set; } = 80;
 
-        //public string ComPort { get; private set; } = "COM3";
-        public string PathDevices { get; private set; } = "devices.json";
+        //public string ComPort { get; set; } = "COM3";
+        public string PathDevices { get; set; } = "devices.json";
 
         public const string PathConfig = "config.json";
 
