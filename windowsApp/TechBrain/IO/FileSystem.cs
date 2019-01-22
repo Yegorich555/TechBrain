@@ -299,6 +299,17 @@ namespace TechBrain.IO
                 GetAllFiles(lst, subdir.FullName, parentDirName + subdir + "\\", excludeRegex);
         }
 
+        public static bool TryRead(string path, out string str)
+        {
+            str = null;
+            if (File.Exists(path))
+            {
+                str = File.ReadAllText(path);
+                return true;
+            }
+            return false;
+        }
+
     }
 
 }

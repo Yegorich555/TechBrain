@@ -26,9 +26,7 @@ namespace TechBrain.Services
         public DevServer(Config config)
         {
             _config = config;
-            if (DeviceRepository == null)
-                DeviceRepository = new DeviceRepository(config.PathDevices);
-            
+            DeviceRepository = new DeviceRepository(config.PathDevices);
         }
 
         public void Start()

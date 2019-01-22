@@ -20,11 +20,8 @@ namespace TechBrain.Entities
         public DeviceRepository(string path)
         {
             _path = path;
-            if (FileSystem.ExistPath(path))
-            {
-                var text = File.ReadAllText(path);
+            if (FileSystem.TryRead(path, out string text))
                 lst = JsonConvert.DeserializeObject<List<Device>>(text, SerializerSettings);
-            }
             else
                 lst = new List<Device>();
         }
@@ -141,7 +138,7 @@ namespace TechBrain.Entities
         protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
         {
             var property = base.CreateProperty(member, memberSerialization);
-            property.Ignored = property.Ignored || member.GetCustomAttribute<SaveIgnoreAttribute>() != null;            
+            property.Ignored = property.Ignored || member.GetCustomAttribute<SaveIgnoreAttribute>() != null;
             if (!property.Ignored)
             {
                 var attr = member.GetCustomAttribute<DefaultValueAttribute>();
