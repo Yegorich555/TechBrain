@@ -11,7 +11,7 @@ using TechBrain.Entities;
 using TechBrain.Extensions;
 using TechBrain.Services;
 
-namespace ConsoleLauncher
+namespace ConsoleTest
 {
     class Simulator
     {
@@ -28,7 +28,7 @@ namespace ConsoleLauncher
         {
             _tcpServer = new TcpServer()
             {
-                Port = 1999,
+                Port = config.Esp_TcpPort,
                 ReceiveTimeout = 200,
                 SendTimeout = 200,
                 ThreadName = "Simulator_TcpListener",

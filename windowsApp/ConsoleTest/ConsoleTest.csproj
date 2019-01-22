@@ -4,13 +4,14 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{64DC70AD-A753-4066-9FCE-2DFFF0E05C18}</ProjectGuid>
+    <ProjectGuid>{32FF6A4B-1211-4704-A464-2B577CE781C7}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>ConsoleLauncher</RootNamespace>
-    <AssemblyName>ConsoleLauncher</AssemblyName>
+    <RootNamespace>ConsoleTest</RootNamespace>
+    <AssemblyName>ConsoleTest</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile />
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <Deterministic>true</Deterministic>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -44,13 +45,14 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Simulator.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\TechBrain\TechBrain.csproj">
-      <Project>{881B1616-AAEF-423C-BEA9-774F6D9DB04A}</Project>
+      <Project>{881b1616-aaef-423c-bea9-774f6d9db04a}</Project>
       <Name>TechBrain</Name>
     </ProjectReference>
   </ItemGroup>
