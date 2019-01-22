@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
@@ -26,7 +26,8 @@ namespace TechBrain.Entities
         public string Description { get; set; }
 
         bool? isOnline;
-        public bool? IsOnline //todo ignore from saving into json file
+        [SaveIgnore]
+        public bool? IsOnline
         {
             get
             {
