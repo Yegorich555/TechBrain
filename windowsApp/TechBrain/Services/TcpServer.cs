@@ -16,6 +16,7 @@ namespace TechBrain.Services
         public int Port { get; set; } = 555;
         public int ReceiveTimeout { get; set; } = 5000;
         public int SendTimeout { get; set; } = 5000;
+        public bool TryAnotherPorts { get; set; } = true;
 
         private volatile bool _runThread;
         private object _runThreadLock = new object();
@@ -32,8 +33,30 @@ namespace TechBrain.Services
             _thread = new Thread(() =>
             {
                 bool _localRunThread = true;
-                var server = new TcpListener(IPAddress.Any, Port); //todo port+1, port+2 if this is busy
-                server.Start();
+
+                TcpListener server = null;
+                var port = Port;
+                
+                while (_localRunThread)
+                {
+                    lock (_runThreadLock)
+                    {
+                        _localRunThread = _runThread;
+                    }
+                    try
+                    {
+                        server = new TcpListener(IPAddress.Any, port++);
+                        server.Start();
+                        Debug.WriteLine($"TcpServer '{ThreadName}' started on " + server.LocalEndpoint);
+                        break;
+                    }
+                    catch (SocketException)
+                    {
+                        if (!TryAnotherPorts)
+                            throw;
+                    }
+                }
+
                 while (_localRunThread)
                 {
                     lock (_runThreadLock)
