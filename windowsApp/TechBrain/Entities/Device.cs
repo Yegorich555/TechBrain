@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Net;
 using TechBrain.Communication.Drivers;
 using TechBrain.Communication.Protocols;
@@ -42,7 +43,7 @@ namespace TechBrain.Entities
 
         public DateTime? IsOnlineDate { get; private set; }
         public List<Sensor> Sensors { get; set; }
-        public List<DeviceOutput> Outputs { get; set; }
+        public List<Output> Outputs { get; set; }
         public virtual bool HasTime { get; set; }
         public virtual bool HasSleep { get; set; } = true;
         public virtual bool HasResponse { get; set; } = true;
@@ -55,6 +56,8 @@ namespace TechBrain.Entities
         public IPAddress IpAddress { get; set; }
         #endregion
 
+        [DefaultValue(OutputTypes.None)]
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
         public DeviceTypes Type { get; set; }
 
         [JsonIgnore]

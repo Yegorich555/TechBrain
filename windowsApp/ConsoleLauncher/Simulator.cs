@@ -111,9 +111,9 @@ namespace ConsoleLauncher
                 HasTime = false,
                 Name = "FirstESP",
                 Type = DeviceTypes.ESP,
-                Outputs = new List<DeviceOutput>()
+                Outputs = new List<Output>()
                 {
-                   new DeviceOutput()
+                   new Output()
                    {
                        Id = 1,
                        Name = "TestOut1",
@@ -132,9 +132,9 @@ namespace ConsoleLauncher
                 HasTime = true,
                 Name = "FirstESP_AVR",
                 Type = DeviceTypes.ESP_AVR,
-                Outputs = new List<DeviceOutput>()
+                Outputs = new List<Output>()
                 {
-                    new DeviceOutput()
+                    new Output()
                    {
                        Id = 1,
                        Name = "TestOut1",

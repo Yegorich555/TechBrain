@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -43,7 +44,8 @@ namespace TechBrain.Entities
                 {
                     Formatting = Formatting.Indented,
                     NullValueHandling = NullValueHandling.Ignore,
-                    //ContractResolver = new RepositoryContractResolver()
+                    DefaultValueHandling = DefaultValueHandling.Populate,
+                    ContractResolver = new RepositoryContractResolver()
                 };
                 settings.Converters.Add(new IPAddressConverter());
                 return settings;
@@ -139,7 +141,18 @@ namespace TechBrain.Entities
         protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
         {
             var property = base.CreateProperty(member, memberSerialization);
-            property.Ignored = property.Ignored || member.GetCustomAttribute<SaveIgnoreAttribute>() != null;
+            property.Ignored = property.Ignored || member.GetCustomAttribute<SaveIgnoreAttribute>() != null;            
+            if (!property.Ignored)
+            {
+                var attr = member.GetCustomAttribute<DefaultValueAttribute>();
+                //if (attr != null)
+                //{
+                //    //var val = attr.Value;
+                //    var val = property.GetResolvedDefaultValue();
+                //    member.
+
+                //}
+            }
             return property;
         }
     }
