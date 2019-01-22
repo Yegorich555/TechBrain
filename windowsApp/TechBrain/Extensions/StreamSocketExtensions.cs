@@ -23,9 +23,10 @@ namespace TechBrain.Extensions
             client.Client.Send(bytes.ToArray());
         }
 
-        public static byte[] Read(this NetworkStream stream, byte? startByte = null, byte? endByte = null, int maxParcelSize = 255)
+        static byte[] BaseRead(this NetworkStream stream, byte? startByte, byte? endByte, byte? endByte2, int maxParcelSize = 255)
         {
-            byte? waitByte = startByte ?? endByte;
+            byte? waitByte = startByte ?? endByte ?? endByte2;
+            byte? waitByte2 = startByte == null ? endByte2 : null;
             var bytes = new byte[maxParcelSize];
             int i = 0;
             bool canSave = startByte == null;
@@ -53,11 +54,12 @@ namespace TechBrain.Extensions
                 var bt = (byte)stream.ReadByte();
                 if (canSave)
                     bytes[i++] = bt;
-                if (bt == waitByte)
+                if (bt == waitByte || bt == waitByte2)
                 {
-                    if (i == 0 && startByte != null)
-                    { //this is startByte
-                        waitByte = endByte;
+                    if (i == 0 && startByte != null)  //this is startByte
+                    {
+                        waitByte = endByte ?? endByte2;
+                        waitByte2 = endByte2;
                         bytes[i++] = bt;
                         canSave = true;
                     }
@@ -68,6 +70,11 @@ namespace TechBrain.Extensions
             Debug.WriteLine("TcpClient ReadTime: " + sw.ElapsedMilliseconds);
 
             return bytes.Take(i).ToArray();
+        }
+
+        public static byte[] Read(this NetworkStream stream, byte? startByte = null, byte? endByte = null, int maxParcelSize = 255)
+        {
+            return BaseRead(stream, startByte, endByte, null, maxParcelSize);
         }
 
         public static byte[] Read(this TcpClient client, byte? startByte = null, byte? endByte = null, int maxParcelSize = 255)
@@ -86,7 +93,7 @@ namespace TechBrain.Extensions
 
         public static string ReadLine(this TcpClient client)
         {
-            var bytes = Read(client, null, (byte)'\n'); //todo find by '\r'
+            var bytes = BaseRead(client.GetStream(), null, (byte)'\n', (byte)'\r');
             var str = Encoding.ASCII.GetString(bytes).Trim('\r', '\n');
             return str;
         }
