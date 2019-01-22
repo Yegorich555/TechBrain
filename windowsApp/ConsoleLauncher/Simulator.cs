@@ -85,7 +85,7 @@ namespace ConsoleLauncher
             {
                 using (var client = new TcpClient())
                 {
-                    client.Connect("localhost", config.TcpPort);
+                    client.Connect("localhost", config.DevServer_TcpPort);
                     client.Write($"I am ({number})\n");
 
                     client.ReceiveTimeout = config.TcpResponseTimeout;
@@ -121,7 +121,7 @@ namespace ConsoleLauncher
                    }
                 },
                 ResponseTimeout = 2000,
-                IpPort = config.TcpEspPort,
+                IpPort = config.Esp_TcpPort,
             });
             lst.Add(new Device()
             {
@@ -143,7 +143,7 @@ namespace ConsoleLauncher
                 },
                 Sensors = new List<Sensor>(),
                 ResponseTimeout = 5000,
-                IpPort = config.TcpEspPort,
+                IpPort = config.Esp_TcpPort,
             });
 
             for (int i = 0; i < 4; ++i)

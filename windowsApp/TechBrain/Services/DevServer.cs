@@ -35,7 +35,7 @@ namespace TechBrain.Services
         {
             _tcpServer = new TcpServer
             {
-                Port = _config.TcpPort,
+                Port = _config.DevServer_TcpPort,
                 ReceiveTimeout = _config.TcpResponseTimeout / 2,
                 SendTimeout = _config.TcpResponseTimeout / 2,
                 ThreadName = "DevServer_ESP_TCP",

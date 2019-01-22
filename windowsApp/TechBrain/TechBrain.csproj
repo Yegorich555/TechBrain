@@ -81,7 +81,6 @@
     <Compile Include="Services\FLogger\LoggerSettings.cs" />
     <Compile Include="Services\FLogger\LogLevel.cs" />
     <Compile Include="Services\TcpServer.cs" />
-    <Compile Include="Test.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
