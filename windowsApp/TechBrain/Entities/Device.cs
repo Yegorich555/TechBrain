@@ -51,6 +51,7 @@ namespace TechBrain.Entities
 
         public int ResponseTimeout { get; set; }
         //public int Repeats { get; set; }
+        public DateTime? WakeUpTime { get; set; }
 
         #region ESP
         public int? IpPort { get; set; }
@@ -106,6 +107,8 @@ namespace TechBrain.Entities
 
         void BaseCommand(Action action)
         {
+            if (WakeUpTime < DateTime.Now)
+                throw new DeviceException($"Device will wake up at {WakeUpTime.Value.ToString("dd HH:mm:ss")}");
             action();
             if (HasResponse)
                 IsOnline = true;
@@ -179,7 +182,10 @@ namespace TechBrain.Entities
             else
                 Protocol.Sleep(time);
 
-            //todo store end sleepTimeSpan
+            if (HasResponse)
+                IsOnlineDate = DateTime.Now;
+            IsOnline = false;
+            WakeUpTime = DateTime.Now.Add(time);
         }
     }
 }
