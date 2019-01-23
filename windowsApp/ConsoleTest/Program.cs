@@ -53,9 +53,9 @@ namespace ConsoleTest
                     dev.IpPort = config.Esp_TcpPort;
 
                 Thread.Sleep(100);
-
                 while (true)
                 {
+
                     sim.EspSend(devices[0].SerialNumber);
                     sim.EspSend(devices[1].SerialNumber);
                     Wrap("ping Esp", () => devices[0].Ping(), () => devices[0].IsOnline.ToStringNull());
@@ -68,7 +68,7 @@ namespace ConsoleTest
                     Wrap("sleep Esp_Avr", () => devices[1].Sleep(TimeSpan.FromSeconds(40)));
 
                     devServer.DeviceRepository.Commit();
-                    Thread.Sleep(5000);
+                    Console.ReadLine();
                 }
             }
             catch (Exception ex)

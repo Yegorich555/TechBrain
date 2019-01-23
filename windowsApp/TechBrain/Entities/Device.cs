@@ -3,6 +3,7 @@ using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Net;
 using TechBrain.Communication.Drivers;
 using TechBrain.Communication.Protocols;
@@ -20,6 +21,7 @@ namespace TechBrain.Entities
     }
     public class Device : IEntity
     {
+        #region Properties
         public int Id { get; set; }
         public int SerialNumber { get; set; }
         public string Name { get; set; }
@@ -53,9 +55,23 @@ namespace TechBrain.Entities
         //public int Repeats { get; set; }
         public DateTime? WakeUpTime { get; set; }
 
+        [SaveIgnore]
+        [JsonIgnore]
+        public bool IsWaitSyncTime { get; set; }
+
         #region ESP
         public int? IpPort { get; set; }
+
+        [SaveIgnore]
         public IPAddress IpAddress { get; set; }
+
+        [SaveIgnore]
+        [JsonIgnore]
+        public bool IsESP { get => Type == DeviceTypes.ESP || Type == DeviceTypes.ESP_AVR; }
+
+        [SaveIgnore]
+        [JsonIgnore]
+        public bool IsNeedIp { get => IsESP && IpAddress == null; }
         #endregion
 
         [DefaultValue(OutputTypes.None)]
@@ -94,7 +110,7 @@ namespace TechBrain.Entities
                     case DeviceTypes.None:
                         throw new NullReferenceException("Device type is not defined");
                     case DeviceTypes.AVR:
-                        return new TbProtocol(Driver, HasResponse, Id); //todo use TbProtocol.Address instead of SerialNumber
+                        return new TbProtocol(Driver, HasResponse, Id); //todo use TbProtocol.Address instead of Id
                     case DeviceTypes.ESP_AVR:
                         return new TbProtocol(Driver, HasResponse, TbProtocol.BroadcastAddr);
                     case DeviceTypes.ESP:
@@ -104,16 +120,22 @@ namespace TechBrain.Entities
             }
         }
 
+        #endregion
 
+        #region PrivateMethods
         void BaseCommand(Action action)
         {
-            if (WakeUpTime < DateTime.Now)
+            if (IsNeedIp)
+                throw new DeviceException($"Device does not have IpAddress");
+            if (WakeUpTime > DateTime.Now)
                 throw new DeviceException($"Device will wake up at {WakeUpTime.Value.ToString("dd HH:mm:ss")}");
             action();
             if (HasResponse)
                 IsOnline = true;
         }
+        #endregion
 
+        #region PublicMethods
         public bool Ping()
         {
             if (!HasResponse)
@@ -127,6 +149,7 @@ namespace TechBrain.Entities
             if (!HasTime)
                 throw new DeviceException("Device does not support Time command");
             BaseCommand(() => Protocol.SetTime(dt));
+            IsWaitSyncTime = false;
         }
 
         public void UpdateSensors()
@@ -153,7 +176,7 @@ namespace TechBrain.Entities
                 {
                     var output = Outputs[i];
                     if (output.Type != OutputTypes.Pwm)
-                        throw new DeviceException($"Device Output {num} is {output.Type.ToString()} and is not PWM. Output can't take value {value}");
+                        throw new DeviceException($"Device Output {num} is {output.Type.ToString()} and it is not PWM. Output can not take value {value}");
                 }
             }
 
@@ -170,22 +193,33 @@ namespace TechBrain.Entities
             if (!HasSleep)
                 throw new DeviceException($"Device does not support Sleep");
 
-            if (Type == DeviceTypes.ESP || Type == DeviceTypes.ESP_AVR)
+            if (IsWaitSyncTime && HasTime)
+            {
+                Debug.WriteLine("Device. Sleep(). Sync time before sleep...");
+                BaseCommand(() => Protocol.SetTime(DateTime.Now));
+            }
+
+            Protocol sleepProtocol;
+            if (IsESP)
             {
                 var driver = new TcpDriver(IpAddress, (int)IpPort)
                 {
                     ResponseTimeout = ResponseTimeout,
                 };
-                var protocol = new EspProtocol(driver);
-                BaseCommand(() => protocol.Sleep(time));
+                sleepProtocol = new EspProtocol(driver);
             }
             else
-                Protocol.Sleep(time);
+                sleepProtocol = Protocol;
+
+            BaseCommand(() => sleepProtocol.Sleep(time));
 
             if (HasResponse)
                 IsOnlineDate = DateTime.Now;
             IsOnline = false;
             WakeUpTime = DateTime.Now.Add(time);
+
+            IpAddress = null; //todo storeLatestIpAddress
         }
+        #endregion
     }
 }

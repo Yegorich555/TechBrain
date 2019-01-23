@@ -96,7 +96,7 @@ namespace TechBrain
         }
         #endregion
 
-        #region
+        #region Properties
         /// <summary>
         /// Timer between events CallBack
         /// </summary>

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using TechBrain;
 using TechBrain.Communication.Protocols;
 using TechBrain.Entities;
@@ -57,6 +58,15 @@ namespace ConsoleTest
                         var result = (str.Contains("esp_") ? "OK: " : "Error: ") + str.Replace("esp_", "") + '\n';
                         if (!str.Contains("sleep"))
                             stream.Write(Encoding.ASCII.GetBytes(result));
+                        else
+                            Task.Run(() =>
+                            {
+                                var sec = int.Parse(str.Extract('(', ')'));
+                                Thread.Sleep(sec);
+                                EspSend(devices[0].SerialNumber);
+                                EspSend(devices[1].SerialNumber);
+
+                            });
                         Debug.WriteLine($"Simulator get: '{str.Replace("\n", "/n")}'");
                     }
                     else

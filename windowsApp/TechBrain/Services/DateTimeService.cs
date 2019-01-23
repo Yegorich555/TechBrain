@@ -8,11 +8,11 @@ namespace TechBrain.Services
     {
         static Stopwatch sw = new Stopwatch();
 
-        public event EventHandler<CommonEventArgs> YearChanged;
-        public event EventHandler<CommonEventArgs> MonthChanged;
-        public event EventHandler<CommonEventArgs> DayChanged;
-        public event EventHandler<CommonEventArgs> HourChanged;
-        public event EventHandler<CommonEventArgs> MinuteChanged;
+        public event EventHandler<DateTime> YearChanged;
+        public event EventHandler<DateTime> MonthChanged;
+        public event EventHandler<DateTime> DayChanged;
+        public event EventHandler<DateTime> HourChanged;
+        public event EventHandler<DateTime> MinuteChanged;
 
         private static DateTimeService instance;
         public static DateTimeService Instance
@@ -37,17 +37,16 @@ namespace TechBrain.Services
                 {
                     tPeriodical.Interval = TimeSpan.FromMinutes(1);
 
-                    var args = new CommonEventArgs(now);
-                    MinuteChanged?.Invoke(this, args);
+                    MinuteChanged?.Invoke(this, now);
 
                     if (now.Hour != lastNow.Hour)
-                        HourChanged?.Invoke(this, args);
+                        HourChanged?.Invoke(this, now);
                     if (now.Day != lastNow.Day)
-                        DayChanged?.Invoke(this, args);
+                        DayChanged?.Invoke(this, now);
                     if (now.Month != lastNow.Month)
-                        MonthChanged?.Invoke(this, args);
+                        MonthChanged?.Invoke(this, now);
                     if (now.Year != lastNow.Year)
-                        YearChanged?.Invoke(this, args);
+                        YearChanged?.Invoke(this, now);
                 }
                 
                 lastNow = now;

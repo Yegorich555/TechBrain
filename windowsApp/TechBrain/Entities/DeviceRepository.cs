@@ -21,7 +21,10 @@ namespace TechBrain.Entities
         {
             _path = path;
             if (FileSystem.TryRead(path, out string text))
+            {
                 lst = JsonConvert.DeserializeObject<List<Device>>(text, SerializerSettings);
+                //todo check Ids for devices
+            }
             else
                 lst = new List<Device>();
         }
