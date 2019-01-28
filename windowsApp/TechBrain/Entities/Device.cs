@@ -62,16 +62,26 @@ namespace TechBrain.Entities
         #region ESP
         public int? IpPort { get; set; }
 
+        IPAddress ipAddress;
         [SaveIgnore]
-        public IPAddress IpAddress { get; set; }
+        public IPAddress IpAddress
+        {
+            get => ipAddress;
+            set
+            {
+                ipAddress = value;
+                isNeedIp = false;
+            }
+        }
 
         [SaveIgnore]
         [JsonIgnore]
         public bool IsESP { get => Type == DeviceTypes.ESP || Type == DeviceTypes.ESP_AVR; }
 
+        bool isNeedIp = false;
         [SaveIgnore]
         [JsonIgnore]
-        public bool IsNeedIp { get => IsESP && IpAddress == null; }
+        public bool IsNeedIp { get => IsESP && (isNeedIp || IpAddress == null); }
         #endregion
 
         [DefaultValue(OutputTypes.None)]
@@ -218,7 +228,7 @@ namespace TechBrain.Entities
             IsOnline = false;
             WakeUpTime = DateTime.Now.Add(time);
 
-            IpAddress = null; //todo storeLatestIpAddress
+            isNeedIp = true;
         }
         #endregion
     }
