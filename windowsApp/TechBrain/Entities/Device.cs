@@ -110,7 +110,7 @@ namespace TechBrain.Entities
                     case DeviceTypes.None:
                         throw new NullReferenceException("Device type is not defined");
                     case DeviceTypes.AVR:
-                        return new TbProtocol(Driver, HasResponse, Id); //todo use TbProtocol.Address instead of Id
+                        return new TbProtocol(Driver, HasResponse, SerialNumber);
                     case DeviceTypes.ESP_AVR:
                         return new TbProtocol(Driver, HasResponse, TbProtocol.BroadcastAddr);
                     case DeviceTypes.ESP:
