@@ -71,7 +71,7 @@ namespace TechBrain.Services
                 if (item.WakeUpTime > now || item.IsNeedIp)
                     item.IsWaitSyncTime = true;
                 else
-                    Task.Run(() => item.SetTime(now));
+                    Task.Run(() => WrapError(() => item.SetTime(now)));
             }
         }
 
