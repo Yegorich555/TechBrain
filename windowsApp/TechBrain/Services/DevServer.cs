@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -155,7 +155,6 @@ namespace TechBrain.Services
                     SerialNumber = SerialNumber,
                     IsOnline = true,
                 });
-                DeviceRepository.Commit();
             }
         }
 
