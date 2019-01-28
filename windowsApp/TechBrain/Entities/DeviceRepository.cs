@@ -17,22 +17,25 @@ namespace TechBrain.Entities
         object _lockObj = new object();
         List<Device> lst;
 
+        void InitDevices(string path, List<Device> devices)
+        {
+            _path = path;
+            lst = devices;
+
+            foreach (var item in lst) //check for invalid id
+                item.Id = GenerateId(item); //create new id if it was invalid
+        }
+
         public DeviceRepository(string path)
         {
-            _path = path;
+            List<Device> devices;
             if (FileSystem.TryRead(path, out string text))
-            {
-                lst = JsonConvert.DeserializeObject<List<Device>>(text, SerializerSettings);
-                //todo check Ids for devices
-            }
+                devices = JsonConvert.DeserializeObject<List<Device>>(text, SerializerSettings);
             else
-                lst = new List<Device>();
+                devices = new List<Device>();
+            InitDevices(path, devices);
         }
-        public DeviceRepository(string path, IEnumerable<Device> devices)
-        {
-            _path = path;
-            lst = new List<Device>(devices);
-        }
+        public DeviceRepository(string path, IEnumerable<Device> devices) => InitDevices(path, new List<Device>());
 
         public int Count { get => lst.Count; }
 
@@ -88,19 +91,23 @@ namespace TechBrain.Entities
                 BaseCommit();
         }
 
+        int GenerateId(Device device)
+        {
+            var id = device.Id;
+            if (id <= 0)
+                id = lst[lst.Count - 1].Id + 1;
+            while (lst.Any(a => a.Id == id && device != a))
+                ++id;
+            return id;
+        }
+
         public int Add(Device device)
         {
             return ChangeAction(() =>
             {
-                var id = device.Id;
-                if (id == 0 || lst.Any(a => a.Id == id))
-                    id = lst[lst.Count - 1].Id + 1;
-                while (lst.Any(a => a.Id == id))
-                    ++id;
-
-                device.Id = id;
+                device.Id = GenerateId(device);
                 lst.Add(device);
-                return id;
+                return device.Id;
             });
         }
 

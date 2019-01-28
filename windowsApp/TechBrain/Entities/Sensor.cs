@@ -28,8 +28,6 @@ namespace TechBrain.Entities
         public SensorTypes Type { get; set; }
         public SensorValue? Value { get; set; }
 
-        //todo min and maxValue
-
         public override string ToString()
         {
             return Id + "-" + Name + ": " + Value?.ToString();
