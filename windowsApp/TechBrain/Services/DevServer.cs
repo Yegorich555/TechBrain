@@ -51,7 +51,7 @@ namespace TechBrain.Services
             DateTimeService.Instance.HourChanged += OnHourChanged;
 
             _scanTimer = new AsyncTimer(_config.DeviceScanTime);
-            _scanTimer.CallBack += _scanTimer_CallBack;
+            _scanTimer.CallBack += Scan_CallBack;
             _scanTimer.Start();
         }
 
@@ -73,8 +73,8 @@ namespace TechBrain.Services
         #endregion
 
         #region PrivateMethods
-        object lockObj = new object();
-        void _scanTimer_CallBack(object sender, CustomEventArgs.CommonEventArgs e)
+        readonly object lockObj = new object();
+        void Scan_CallBack(object sender, CustomEventArgs.CommonEventArgs e)
         {
             bool lockTaken = false;
             try
@@ -109,7 +109,7 @@ namespace TechBrain.Services
                             Task.Run(() => WrapError(() =>
                             {
                                 //todo wait after gotIp???
-                                foreach (var action in queue)
+                                foreach (var action in queue) //todo queue inside driver of device for prevent 'open-close-open...'
                                     action();
                             }));
                         }

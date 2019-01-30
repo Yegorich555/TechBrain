@@ -92,7 +92,7 @@ namespace TechBrain.Entities
         public DeviceTypes Type { get; set; }
 
         [JsonIgnore]
-        public IDriver Driver
+        IDriver Driver
         {
             get
             {
@@ -114,7 +114,7 @@ namespace TechBrain.Entities
         }
 
         [JsonIgnore]
-        public Protocol Protocol
+        Protocol Protocol
         {
             get
             {
@@ -136,15 +136,19 @@ namespace TechBrain.Entities
         #endregion
 
         #region PrivateMethods
+        readonly object lockObj = new object();
         void BaseCommand(Action action)
         {
-            if (IsNeedIp)
-                throw new DeviceException($"Device does not have IpAddress");
-            if (WakeUpTime > DateTime.Now)
-                throw new DeviceException($"Device will wake up at {WakeUpTime.Value.ToString("dd HH:mm:ss")}");
-            action();
-            if (HasResponse)
-                IsOnline = true;
+            lock (lockObj) //todo maybe add analyzer if next action is the same: for example getSenors several times
+            {
+                if (IsNeedIp)
+                    throw new DeviceException($"Device does not have IpAddress");
+                if (WakeUpTime > DateTime.Now)
+                    throw new DeviceException($"Device will wake up at {WakeUpTime.Value.ToString("dd HH:mm:ss")}");
+                action();
+                if (HasResponse)
+                    IsOnline = true;
+            }
         }
         #endregion
 
@@ -152,8 +156,8 @@ namespace TechBrain.Entities
         public bool Ping()
         {
             if (!HasResponse)
-                return false;
-            IsOnline = Protocol.Ping();
+                throw new DeviceException($"Device does not support Ping command"); ;
+            BaseCommand(() => IsOnline = Protocol.Ping());
             return IsOnline == true;
         }
 
