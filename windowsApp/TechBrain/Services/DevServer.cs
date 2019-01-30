@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -21,6 +21,7 @@ namespace TechBrain.Services
 
         Config _config;
         TcpServer _tcpServer;
+        AsyncTimer _scanTimer;
 
         public DevServer(Config config, IEnumerable<Device> devices) : this(config)
         {
@@ -48,6 +49,10 @@ namespace TechBrain.Services
             _tcpServer.Start();
 
             DateTimeService.Instance.HourChanged += OnHourChanged;
+
+            _scanTimer = new AsyncTimer(_config.DeviceScanTime);
+            _scanTimer.CallBack += _scanTimer_CallBack;
+            _scanTimer.Start();
         }
 
         public void Stop()
@@ -55,24 +60,77 @@ namespace TechBrain.Services
             if (_tcpServer != null)
             {
                 _tcpServer.Stop();
-                _tcpServer.GotNewClient -= GotNewClient;
+                _tcpServer = null;
             }
             DateTimeService.Instance.HourChanged -= OnHourChanged;
+            if (_scanTimer != null)
+            {
+                _scanTimer.Stop();
+                _scanTimer.Dispose();
+                _scanTimer = null;
+            }
         }
         #endregion
 
         #region PrivateMethods
+        object lockObj = new object();
+        void _scanTimer_CallBack(object sender, CustomEventArgs.CommonEventArgs e)
+        {
+            bool lockTaken = false;
+            try
+            {
+                Monitor.TryEnter(lockObj, ref lockTaken);
+                if (lockTaken)
+                {
+                    Debug.WriteLine("DevServer. Go scan...");
+                    var lst = DeviceRepository.GetAll();
+                    foreach (var item in lst)
+                    {
+                        if (item.WakeUpTime > DateTime.Now || item.IsNeedIp) //wait for the future
+                            continue;
+
+                        var queue = new List<Action>();
+                        if (item.HasTime && item.IsWaitSyncTime)
+                            queue.Add(() => item.SetTime(DateTime.Now));
+
+                        if (item.Sensors?.Count > 0)
+                        {
+                            queue.Add(() => item.UpdateSensors()); //todo implement interval listening
+                        }
+
+                        if (item.HasSleep) //todo calculate sleepTime by RequestSensorsInterval
+                            queue.Add(() => item.Sleep());
+
+                        if (item.HasResponse && !queue.Any())
+                            queue.Add(() => item.Ping());
+
+                        if (queue.Any())
+                        {
+                            Task.Run(() => WrapError(() =>
+                            {
+                                //todo wait after gotIp???
+                                foreach (var action in queue)
+                                    action();
+                            }));
+                        }
+                    }
+                }
+                else
+                    Debug.WriteLine("DevServer. Skipped scan");
+            }
+            finally
+            {
+                if (lockTaken)
+                    Monitor.Exit(lockObj);
+            }
+        }
+
         void OnHourChanged(object sender, DateTime now)
         {
             Debug.WriteLine("DevServer. Hour changed => set time");
             var lst = DeviceRepository.GetAll().Where(a => a.HasTime).ToList();
             foreach (var item in lst)
-            {
-                if (item.WakeUpTime > now || item.IsNeedIp)
-                    item.IsWaitSyncTime = true;
-                else
-                    Task.Run(() => WrapError(() => item.SetTime(now)));
-            }
+                item.IsWaitSyncTime = true;
         }
 
         void WrapError(Action action, Action finallyAction = null)
@@ -129,20 +187,6 @@ namespace TechBrain.Services
                 item.IpAddress = IpAddress;
                 item.IsOnline = true;
                 item.WakeUpTime = null;
-                if (item.HasTime && item.IsWaitSyncTime)
-                {
-                    Task.Run(() =>
-                    {
-                        WrapError(() =>
-                        {
-                            Debug.WriteLine($"DevServer. SyncTime by waiting '{SerialNumber}'");
-                            Thread.Sleep(Math.Min(item.ResponseTimeout, 2000));
-                            var now = DateTime.Now;
-                            if (!(item.WakeUpTime > now))
-                                item.SetTime(now);
-                        });
-                    });
-                }
             }
             else
             {
@@ -151,6 +195,7 @@ namespace TechBrain.Services
                     Type = DeviceTypes.ESP,
                     HasResponse = true,
                     HasSleep = true,
+                    SleepTime = TimeSpan.FromMinutes(1),
                     IpAddress = IpAddress,
                     SerialNumber = SerialNumber,
                     IsOnline = true,

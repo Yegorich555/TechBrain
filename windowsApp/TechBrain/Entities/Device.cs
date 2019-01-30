@@ -46,20 +46,22 @@ namespace TechBrain.Entities
 
         public DateTime? IsOnlineDate { get; private set; }
         public List<Sensor> Sensors { get; set; }
+        //todo public TimeSpan? SensorsInterval { get; set; }
+
         public List<Output> Outputs { get; set; }
         public virtual bool HasTime { get; set; }
-        public virtual bool HasSleep { get; set; } = true;
+        public virtual bool HasSleep { get; set; } = true; //todo useless if SleepTime prop exists
         public virtual bool HasResponse { get; set; } = true;
 
         public int ResponseTimeout { get; set; }
-        //public int Repeats { get; set; }
+        //todo public int Repeats { get; set; }
+
+        public TimeSpan? SleepTime { get; set; }
         public DateTime? WakeUpTime { get; set; }
 
         [SaveIgnore]
         [JsonIgnore]
-        public bool IsWaitSyncTime { get; set; }
-
-        #region ESP
+        public bool IsWaitSyncTime { get; set; } //todo maybe store use another place
         public int? IpPort { get; set; }
 
         IPAddress ipAddress;
@@ -74,6 +76,7 @@ namespace TechBrain.Entities
             }
         }
 
+        #region Helpers
         [SaveIgnore]
         [JsonIgnore]
         public bool IsESP { get => Type == DeviceTypes.ESP || Type == DeviceTypes.ESP_AVR; }
@@ -196,7 +199,11 @@ namespace TechBrain.Entities
             else
                 Outputs[num - 1].Value = value; //todo not always is actually
         }
-
+        public void Sleep()
+        {
+            if (SleepTime == null)
+                throw new DeviceException($"Device doesn't have sleep time");
+        }
 
         public void Sleep(TimeSpan time)
         {

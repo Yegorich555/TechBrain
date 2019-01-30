@@ -12,8 +12,10 @@ namespace TechBrain
 
         //public string ComPort { get; set; } = "COM3";
         public string PathDevices { get; set; } = "devices.json";
-
         public const string PathConfig = "config.json";
+
+        public int DeviceScanTime { get; set; } = 1000;//ms
+        //todo public int SensorsScanTime { get; set; } = 5000;//todo change scan to 1 sec //ms
 
         public void SaveToFile()
         {

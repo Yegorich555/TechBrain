@@ -69,7 +69,7 @@ namespace TechBrain
                 if (!immediately)
                     dueTime = Interval;
                 if (threadTimer == null)
-                    threadTimer = new Timer(timerCallBack, null, dueTime, Interval);
+                    threadTimer = new Timer(TimerCallBack, null, dueTime, Interval);
                 else
                     threadTimer.Change(dueTime, Interval);
             }
@@ -77,7 +77,7 @@ namespace TechBrain
                 threadTimer.Change(-1, -1);
         }
 
-        private void timerCallBack(object state)
+        private void TimerCallBack(object state)
         {
             CallBack?.Invoke(this, new CommonEventArgs(Arguments));
         }
