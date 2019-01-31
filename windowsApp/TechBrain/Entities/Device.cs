@@ -67,7 +67,6 @@ namespace TechBrain.Entities
 
         public List<Output> Outputs { get; set; }
         public virtual bool HasTime { get; set; }
-        public virtual bool HasSleep { get; set; } = true; //todo useless if SleepTime prop exists
         public virtual bool HasResponse { get; set; } = true;
 
         public int ResponseTimeout { get; set; }
@@ -240,9 +239,6 @@ namespace TechBrain.Entities
 
         public void Sleep(TimeSpan time)
         {
-            if (!HasSleep)
-                throw new DeviceException($"Device does not support Sleep");
-
             if (IsWaitSyncTime && HasTime)
             {
                 Debug.WriteLine("Device. Sleep(). Sync time before sleep...");

@@ -98,7 +98,7 @@ namespace TechBrain.Services
                             queue.Add(() => item.UpdateSensors()); //todo implement interval listening
                         }
 
-                        if (item.HasSleep) //todo calculate sleepTime by RequestSensorsInterval
+                        if (item.SleepTime != null) //todo calculate sleepTime by RequestSensorsInterval
                             queue.Add(() => item.Sleep());
 
                         if (item.HasResponse && !queue.Any())
@@ -194,7 +194,6 @@ namespace TechBrain.Services
                 {
                     Type = DeviceTypes.ESP,
                     HasResponse = true,
-                    HasSleep = true,
                     SleepTime = TimeSpan.FromMinutes(1),
                     IpAddress = IpAddress,
                     SerialNumber = SerialNumber,
