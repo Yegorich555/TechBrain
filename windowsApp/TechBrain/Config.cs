@@ -15,7 +15,8 @@ namespace TechBrain
         public const string PathConfig = "config.json";
 
         public int DeviceScanTime { get; set; } = 1000;//ms
-        //todo public int SensorsScanTime { get; set; } = 5000;//todo change scan to 1 sec //ms
+        public int SensorsScanTime { get; set; } = 5000;//todo change scan to 1 sec //ms
+        public int DeviceCacheTime { get; set; } = 500;//ms
 
         public void SaveToFile()
         {

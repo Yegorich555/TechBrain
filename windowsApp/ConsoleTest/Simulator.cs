@@ -17,7 +17,7 @@ namespace ConsoleTest
     class Simulator
     {
         private Config config;
-        private List<Device> devices;
+        private readonly List<Device> devices;
         TcpServer _tcpServer;
         public Simulator(Config config, List<Device> devices)
         {
@@ -112,7 +112,7 @@ namespace ConsoleTest
         public static List<Device> GenerateNewDevices(Config config)
         {
             var lst = new List<Device>();
-            lst.Add(new Device()
+            lst.Add(new Device(config.DeviceCacheTime)
             {
                 Id = 1,
                 SerialNumber = 1,
@@ -133,7 +133,7 @@ namespace ConsoleTest
                 ResponseTimeout = 2000,
                 IpPort = config.Esp_TcpPort,
             });
-            lst.Add(new Device()
+            lst.Add(new Device(config.DeviceCacheTime)
             {
                 Id = 2,
                 SerialNumber = 2,

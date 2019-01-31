@@ -19,8 +19,26 @@ namespace TechBrain.Entities
         ESP,
         ESP_AVR
     }
+
+    enum CacheKeys
+    {
+        Ping,
+        SetTime,
+        UpdateSensors
+    }
+
     public class Device : IEntity
     {
+        readonly Cache<CacheKeys, bool> _cache = new Cache<CacheKeys, bool>();
+        readonly int _cacheTime;
+
+        public Device(int cacheTime)
+        {
+            _cacheTime = cacheTime;
+        }
+
+        private Device() { }
+
         #region Properties
         public int Id { get; set; }
         public int SerialNumber { get; set; }
@@ -46,7 +64,6 @@ namespace TechBrain.Entities
 
         public DateTime? IsOnlineDate { get; private set; }
         public List<Sensor> Sensors { get; set; }
-        //todo public TimeSpan? SensorsInterval { get; set; }
 
         public List<Output> Outputs { get; set; }
         public virtual bool HasTime { get; set; }
@@ -137,15 +154,24 @@ namespace TechBrain.Entities
 
         #region PrivateMethods
         readonly object lockObj = new object();
-        void BaseCommand(Action action)
+        void BaseCommand(Action action, CacheKeys? cacheKey = null)
         {
-            lock (lockObj) //todo maybe add analyzer if next action is the same: for example getSenors several times
+            if (cacheKey != null && _cache.TryGet((CacheKeys)cacheKey, out var v))
+            {
+                Debug.WriteLine("Device. Result from Cache");
+                return;
+            }
+            lock (lockObj)
             {
                 if (IsNeedIp)
                     throw new DeviceException($"Device does not have IpAddress");
                 if (WakeUpTime > DateTime.Now)
                     throw new DeviceException($"Device will wake up at {WakeUpTime.Value.ToString("dd HH:mm:ss")}");
                 action();
+
+                if (cacheKey != null)
+                    _cache.Set((CacheKeys)cacheKey, true, TimeSpan.FromMilliseconds(_cacheTime));
+
                 if (HasResponse)
                     IsOnline = true;
             }
@@ -157,7 +183,8 @@ namespace TechBrain.Entities
         {
             if (!HasResponse)
                 throw new DeviceException($"Device does not support Ping command"); ;
-            BaseCommand(() => IsOnline = Protocol.Ping());
+
+            BaseCommand(() => IsOnline = Protocol.Ping(), CacheKeys.Ping);
             return IsOnline == true;
         }
 
@@ -165,7 +192,7 @@ namespace TechBrain.Entities
         {
             if (!HasTime)
                 throw new DeviceException("Device does not support Time command");
-            BaseCommand(() => Protocol.SetTime(dt));
+            BaseCommand(() => Protocol.SetTime(dt), CacheKeys.SetTime);
             IsWaitSyncTime = false;
         }
 
@@ -176,7 +203,7 @@ namespace TechBrain.Entities
             if (Sensors == null || Sensors.Count < 1)
                 throw new DeviceException("Device has not Sensors");
 
-            BaseCommand(() => Protocol.UpdateSensors(Sensors));
+            BaseCommand(() => Protocol.UpdateSensors(Sensors), CacheKeys.UpdateSensors);
         }
 
         public void SetOut(int num, int value) //num == 0 for all outs
@@ -197,12 +224,14 @@ namespace TechBrain.Entities
                 }
             }
 
+            //todo compare with Outputs before
             BaseCommand(() => Protocol.SetOut(num, value));
             if (num == 0)
                 Outputs.ForEach(a => a.Value = value);
             else
                 Outputs[num - 1].Value = value; //todo not always is actually
         }
+
         public void Sleep()
         {
             if (SleepTime == null)
@@ -217,7 +246,7 @@ namespace TechBrain.Entities
             if (IsWaitSyncTime && HasTime)
             {
                 Debug.WriteLine("Device. Sleep(). Sync time before sleep...");
-                BaseCommand(() => Protocol.SetTime(DateTime.Now));
+                BaseCommand(() => Protocol.SetTime(DateTime.Now), CacheKeys.SetTime);
             }
 
             Protocol sleepProtocol;

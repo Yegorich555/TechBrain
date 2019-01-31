@@ -190,7 +190,7 @@ namespace TechBrain.Services
             }
             else
             {
-                DeviceRepository.Add(new Device()
+                DeviceRepository.Add(new Device(_config.DeviceCacheTime)
                 {
                     Type = DeviceTypes.ESP,
                     HasResponse = true,
