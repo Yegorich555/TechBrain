@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -73,6 +74,7 @@ namespace TechBrain.Services
         #endregion
 
         #region PrivateMethods
+        readonly Dictionary<int, DateTime> scheduleSensors = new Dictionary<int, DateTime>();
         readonly object lockObj = new object();
         void Scan_CallBack(object sender, CustomEventArgs.CommonEventArgs e)
         {
@@ -95,7 +97,12 @@ namespace TechBrain.Services
 
                         if (item.Sensors?.Count > 0)
                         {
-                            queue.Add(() => item.UpdateSensors()); //todo implement interval listening
+                            var now = DateTime.Now;
+                            if (!scheduleSensors.TryGetValue(item.Id, out var dateTime) || dateTime >= now)
+                            {
+                                queue.Add(() => { item.UpdateSensors(); });
+                                scheduleSensors[item.Id] = now.Add(TimeSpan.FromMilliseconds(_config.SensorsScanTime));
+                            }
                         }
 
                         if (item.SleepTime != null) //todo calculate sleepTime by RequestSensorsInterval
