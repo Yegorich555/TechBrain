@@ -115,7 +115,6 @@ namespace TechBrain.Services
                         {
                             Task.Run(() => WrapError(() =>
                             {
-                                //todo wait after gotIp???
                                 foreach (var action in queue) //todo queue inside driver of device for prevent 'open-close-open...'
                                     action();
                             }));
@@ -158,19 +157,22 @@ namespace TechBrain.Services
         {
             WrapError(() =>
             {
+                int num;
+                IPAddress ip;
                 using (var stream = client.GetStream())
                 {
                     Trace.WriteLine($"DevServer.ESP. New client: {client.Client.RemoteEndPoint}");
                     var str = client.WaitResponse("I am");
                     Trace.WriteLine($"DevServer.ESP. Parcel from {client.Client.RemoteEndPoint}: '{str}'");
 
-                    var num = int.Parse(str.Extract('(', ')'));
-                    var IpAddress = ((IPEndPoint)client.Client.RemoteEndPoint).Address;
-                    AddOrUpdate(IpAddress, num);
+                    num = int.Parse(str.Extract('(', ')'));
+                    ip = ((IPEndPoint)client.Client.RemoteEndPoint).Address;
 
                     byte[] back = Encoding.ASCII.GetBytes("OK\n");
                     stream.Write(back, 0, back.Length);
+
                 }
+                AddOrUpdate(ip, num);
             },
             () =>
             {
