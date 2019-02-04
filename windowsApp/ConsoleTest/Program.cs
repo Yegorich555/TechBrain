@@ -38,7 +38,7 @@ namespace ConsoleTest
             try
             {
                 Console.Title = "Simulator_TechBrain";
-                Debug.Listeners.Add(new TextWriterTraceListener(Console.Out));
+                Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
 
                 var config = Config.ReadFromFile();
                 var devServer = new DevServer(config);
@@ -73,7 +73,7 @@ namespace ConsoleTest
             }
             catch (Exception ex)
             {
-                Debug.WriteLine(ex);
+                Trace.WriteLine(ex);
             }
         }
     }

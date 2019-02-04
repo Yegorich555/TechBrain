@@ -20,7 +20,7 @@ namespace TechBrain.IO
     public class FileSystem
     {
         public static void MoveFile(string path, string destPath, FileCopyMode copyMode = FileCopyMode.SaveExisting)
-        {
+        {            
             if (!File.Exists(destPath))
             {
                 File.Move(path, destPath);
@@ -65,44 +65,46 @@ namespace TechBrain.IO
             }
         }
 
+        //todo HasWritePermission
         /// <summary>
         /// Check write-rights to path
         /// </summary>
-        public static bool HasWritePermission(string path)
-        {
-            return HasPermission(path, FileSystemRights.Write);
-        }
+        //public static bool HasWritePermission(string path)
+        //{
+        //    return HasPermission(path, FileSystemRights.Write);
+        //}
 
+        //todo HasPermission
         /// <summary>
         /// Check full-rights for path
         /// </summary>
-        public static bool HasPermission(string path, FileSystemRights fileSystemRights)
-        {
-            if (string.IsNullOrWhiteSpace(path))
-                return false;
+        //public static bool HasPermission(string path, FileSystemRights fileSystemRights)
+        //{
+        //    if (string.IsNullOrWhiteSpace(path))
+        //        return false;
 
-            var wrAllow = false;
-            var wrDeny = false;
-            var accessControlList = Directory.GetAccessControl(path);
-            if (accessControlList == null)
-                return false;
-            var accessRules = accessControlList.GetAccessRules(true, true, typeof(SecurityIdentifier));
-            if (accessRules == null)
-                return false;
+        //    var wrAllow = false;
+        //    var wrDeny = false;
+        //    var accessControlList = Directory.GetAccessControl(path);
+        //    if (accessControlList == null)
+        //        return false;
+        //    var accessRules = accessControlList.GetAccessRules(true, true, typeof(SecurityIdentifier));
+        //    if (accessRules == null)
+        //        return false;
 
-            foreach (FileSystemAccessRule rule in accessRules)
-            {
-                if ((fileSystemRights & rule.FileSystemRights) != fileSystemRights)
-                    continue;
+        //    foreach (FileSystemAccessRule rule in accessRules)
+        //    {
+        //        if ((fileSystemRights & rule.FileSystemRights) != fileSystemRights)
+        //            continue;
 
-                if (rule.AccessControlType == AccessControlType.Allow)
-                    wrAllow = true;
-                else if (rule.AccessControlType == AccessControlType.Deny)
-                    wrDeny = true;
-            }
+        //        if (rule.AccessControlType == AccessControlType.Allow)
+        //            wrAllow = true;
+        //        else if (rule.AccessControlType == AccessControlType.Deny)
+        //            wrDeny = true;
+        //    }
 
-            return wrAllow && !wrDeny;
-        }
+        //    return wrAllow && !wrDeny;
+        //}
 
         /// <summary>
         /// Append line to file (if directory or file doesn't exist then try create it)

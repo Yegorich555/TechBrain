@@ -84,7 +84,7 @@ namespace TechBrain.Services
                 Monitor.TryEnter(lockObj, ref lockTaken);
                 if (lockTaken)
                 {
-                    Debug.WriteLine("DevServer. Go scan...");
+                    Trace.WriteLine("DevServer. Go scan...");
                     var lst = DeviceRepository.GetAll();
                     foreach (var item in lst)
                     {
@@ -123,7 +123,7 @@ namespace TechBrain.Services
                     }
                 }
                 else
-                    Debug.WriteLine("DevServer. Skipped scan");
+                    Trace.WriteLine("DevServer. Skipped scan");
             }
             finally
             {
@@ -134,7 +134,7 @@ namespace TechBrain.Services
 
         void OnHourChanged(object sender, DateTime now)
         {
-            Debug.WriteLine("DevServer. Hour changed => set time");
+            Trace.WriteLine("DevServer. Hour changed => set time");
             var lst = DeviceRepository.GetAll().Where(a => a.HasTime).ToList();
             foreach (var item in lst)
                 item.IsWaitSyncTime = true;
@@ -145,7 +145,7 @@ namespace TechBrain.Services
             try { action(); }
             catch (Exception ex)
             {
-                Debug.WriteLine($"DevServer.ESP. Exception: " + ex);
+                Trace.WriteLine($"DevServer.ESP. Exception: " + ex);
                 ErrorLog?.Invoke(ex, $"DevServer.ESP. Exception: " + ex);
             }
             finally
@@ -160,9 +160,9 @@ namespace TechBrain.Services
             {
                 using (var stream = client.GetStream())
                 {
-                    Debug.WriteLine($"DevServer.ESP. New client: {client.Client.RemoteEndPoint}");
+                    Trace.WriteLine($"DevServer.ESP. New client: {client.Client.RemoteEndPoint}");
                     var str = client.WaitResponse("I am");
-                    Debug.WriteLine($"DevServer.ESP. Parcel from {client.Client.RemoteEndPoint}: '{str}'");
+                    Trace.WriteLine($"DevServer.ESP. Parcel from {client.Client.RemoteEndPoint}: '{str}'");
 
                     var num = int.Parse(str.Extract('(', ')'));
                     var IpAddress = ((IPEndPoint)client.Client.RemoteEndPoint).Address;

@@ -67,7 +67,7 @@ namespace TechBrain.Extensions
                         break;
                 }
             }
-            Debug.WriteLine("TcpClient ReadTime: " + sw.ElapsedMilliseconds);
+            Trace.WriteLine("TcpClient ReadTime: " + sw.ElapsedMilliseconds);
 
             return bytes.Take(i).ToArray();
         }
@@ -113,7 +113,7 @@ namespace TechBrain.Extensions
                 var str = ReadLine(client);
                 if (str.IndexOf(waitStr) != -1)
                 {
-                    Debug.WriteLine("TcpClient ReadTime: " + sw.ElapsedMilliseconds);
+                    Trace.WriteLine("TcpClient ReadTime: " + sw.ElapsedMilliseconds);
                     return str;
                 }
             }

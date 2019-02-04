@@ -8,7 +8,7 @@ namespace TechBrain
     {
         public int DevServer_TcpPort { get; set; } = 1234;
         public int TcpResponseTimeout { get; set; } = 1000;
-        public int Esp_TcpPort { get; set; } = 80;
+        public int Esp_TcpPort { get; set; } = 1999;//80;
 
         //public string ComPort { get; set; } = "COM3";
         public string PathDevices { get; set; } = "devices.json";

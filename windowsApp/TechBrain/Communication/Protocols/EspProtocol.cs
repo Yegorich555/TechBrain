@@ -25,7 +25,7 @@ namespace TechBrain.Communication.Protocols
             }
             catch (TimeoutException ex)
             {
-                Debug.WriteLine(ex);
+                Trace.WriteLine(ex);
                 return false;
             }
         }

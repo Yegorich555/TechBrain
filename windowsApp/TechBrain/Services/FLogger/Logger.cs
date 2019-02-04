@@ -76,7 +76,7 @@ namespace TechBrain.Services.FLogger
                             }
                         }
                     }
-                    System.Diagnostics.Debug.WriteLine(str.ToString());
+                    System.Diagnostics.Trace.WriteLine(str.ToString());
 
                     str.Append(Environment.NewLine);
                     str.Append(Environment.NewLine);
@@ -192,7 +192,7 @@ namespace TechBrain.Services.FLogger
         public static void Debug(string message)
         {
             //Instance.Log(LogLevel.Debug, message);
-            System.Diagnostics.Debug.WriteLine(message);
+            System.Diagnostics.Trace.WriteLine(message);
         }
 
     }

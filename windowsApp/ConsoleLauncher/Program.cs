@@ -18,7 +18,8 @@ namespace ConsoleLauncher
             try
             {
                 Console.Title = "TechBrain";
-                Debug.Listeners.Add(new TextWriterTraceListener(Console.Out));
+                
+                Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
 
                 var config = Config.ReadFromFile();
                 var devServer = new DevServer(config);
@@ -37,7 +38,7 @@ namespace ConsoleLauncher
             }
             catch (Exception ex)
             {
-                Debug.WriteLine(ex);
+                Trace.WriteLine(ex);
             }
         }
     }

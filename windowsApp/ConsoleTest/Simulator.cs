@@ -43,7 +43,7 @@ namespace ConsoleTest
         {
             try
             {
-                Debug.WriteLine("Simulator new client");
+                Trace.WriteLine("Simulator new client");
 
                 using (var stream = client.GetStream())
                 {
@@ -67,12 +67,12 @@ namespace ConsoleTest
                                 EspSend(devices[1].SerialNumber);
 
                             });
-                        Debug.WriteLine($"Simulator get: '{str.Replace("\n", "/n")}'");
+                        Trace.WriteLine($"Simulator get: '{str.Replace("\n", "/n")}'");
                     }
                     else
                     {
                         var address = TbProtocol.ExtractAddressFrom(bytes);
-                        Debug.WriteLine($"Simulator get from '{address}'");
+                        Trace.WriteLine($"Simulator get from '{address}'");
                         var bt = TbProtocol.GetResponse(bytes.ToList());
                         stream.Write(bt.ToArray());
                     }
@@ -80,7 +80,7 @@ namespace ConsoleTest
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("Simulator: " + ex);
+                Trace.WriteLine("Simulator: " + ex);
             }
             finally
             {
@@ -100,12 +100,12 @@ namespace ConsoleTest
 
                     client.ReceiveTimeout = config.TcpResponseTimeout;
                     var str = client.ReadLine();
-                    Debug.WriteLine($"Simulator. Esp get: '{str}'");
+                    Trace.WriteLine($"Simulator. Esp get: '{str}'");
                 }
             }
             catch (TimeoutException ex)
             {
-                Debug.WriteLine(ex);
+                Trace.WriteLine(ex);
             }
         }
 
@@ -116,7 +116,7 @@ namespace ConsoleTest
             {
                 Id = 1,
                 SerialNumber = 1,
-                HasSleep = true,
+                SleepTime = TimeSpan.FromMinutes(1),
                 HasResponse = true,
                 HasTime = false,
                 Name = "FirstESP",
@@ -137,7 +137,7 @@ namespace ConsoleTest
             {
                 Id = 2,
                 SerialNumber = 2,
-                HasSleep = true,
+                SleepTime = TimeSpan.FromMinutes(1),
                 HasResponse = true,
                 HasTime = true,
                 Name = "FirstESP_AVR",

@@ -35,7 +35,7 @@ namespace TechBrain.Entities
                 devices = new List<Device>();
             InitDevices(path, devices);
         }
-        public DeviceRepository(string path, IEnumerable<Device> devices) => InitDevices(path, new List<Device>());
+        public DeviceRepository(string path, IEnumerable<Device> devices) => InitDevices(path, new List<Device>(devices));
 
         public int Count { get => lst.Count; }
 

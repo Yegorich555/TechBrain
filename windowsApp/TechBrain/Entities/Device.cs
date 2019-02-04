@@ -157,7 +157,7 @@ namespace TechBrain.Entities
         {
             if (cacheKey != null && _cache.TryGet((CacheKeys)cacheKey, out var v))
             {
-                Debug.WriteLine("Device. Result from Cache");
+                Trace.WriteLine("Device. Result from Cache");
                 return;
             }
             lock (lockObj)
@@ -241,7 +241,7 @@ namespace TechBrain.Entities
         {
             if (IsWaitSyncTime && HasTime)
             {
-                Debug.WriteLine("Device. Sleep(). Sync time before sleep...");
+                Trace.WriteLine("Device. Sleep(). Sync time before sleep...");
                 BaseCommand(() => Protocol.SetTime(DateTime.Now), CacheKeys.SetTime);
             }
 

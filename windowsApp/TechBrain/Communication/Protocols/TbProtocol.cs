@@ -127,13 +127,13 @@ namespace TechBrain.Communication.Protocols
 
         public static bool IsGoodQuality(IList<byte> parcel, int checkReturnAddr, bool checkAnwserAddress = true)
         {
-            Debug.WriteLine("TbProtocol. Checking quality...");
+            Trace.WriteLine("TbProtocol. Checking quality...");
 
             var err = FindError(parcel, checkReturnAddr, checkAnwserAddress);
             if (err != null)
-                Debug.WriteLine($"TbProtocol. Bad quality parcel: {err}\n Parcel bytes: {Extender.BuildStringSep(" ", parcel)}");
+                Trace.WriteLine($"TbProtocol. Bad quality parcel: {err}\n Parcel bytes: {Extender.BuildStringSep(" ", parcel)}");
             else
-                Debug.WriteLine("TbProtocol. Checking quality: Successfull");
+                Trace.WriteLine("TbProtocol. Checking quality: Successfull");
 
             return err == null;
         }
@@ -254,7 +254,7 @@ namespace TechBrain.Communication.Protocols
                 };
 
 
-                Debug.WriteLine($"TbProtocol.GetResponse for {b.ToString()} command...");
+                Trace.WriteLine($"TbProtocol.GetResponse for {b.ToString()} command...");
                 bool isOk = false;
                 switch (b)
                 {
@@ -324,7 +324,7 @@ namespace TechBrain.Communication.Protocols
             }
             catch (TimeoutException ex)
             {
-                Debug.WriteLine(ex);
+                Trace.WriteLine(ex);
                 return false;
             }
         }

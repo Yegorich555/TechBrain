@@ -47,7 +47,7 @@ namespace TechBrain.Services
                     {
                         server = new TcpListener(IPAddress.Any, port++);
                         server.Start();
-                        Debug.WriteLine($"TcpServer '{ThreadName}' started on " + server.LocalEndpoint);
+                        Trace.WriteLine($"TcpServer '{ThreadName}' started on " + server.LocalEndpoint);
                         break;
                     }
                     catch (SocketException)
@@ -70,7 +70,7 @@ namespace TechBrain.Services
                         var client = server.AcceptTcpClient();
                         Task.Run(() =>
                         {
-                            Debug.WriteLine("TcpServer.New client: " + client.Client.RemoteEndPoint);
+                            Trace.WriteLine("TcpServer.New client: " + client.Client.RemoteEndPoint);
                             if (GotNewClient != null)
                             {
                                 client.ReceiveTimeout = ReceiveTimeout;
@@ -86,7 +86,7 @@ namespace TechBrain.Services
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine("TcpServer.Listen(). " + ex);
+                        Trace.WriteLine("TcpServer.Listen(). " + ex);
                         ErrorLog?.Invoke(this, ex.ToString());
                     }
                 }
