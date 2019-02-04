@@ -172,26 +172,6 @@ namespace TechBrain.IO
     //        return null;
     //    }
 
-
-    //    //todo implemted StopListen and thread-guard
-    //    //public void ListenAsync()
-    //    //{
-    //    //    Task.Factory.StartNew(() => { Listen(); });
-    //    //}
-
-    //    //public void Listen()
-    //    //{
-    //    //    try
-    //    //    {
-    //    //        while (true)
-    //    //        {
-    //    //            Read();
-    //    //        }
-    //    //    }
-    //    //    catch (Exception ex) { OnErrorAppeared(ex); }
-    //    //}
-
-
     //    public void Open()
     //    {
     //        if (!port.IsOpen)

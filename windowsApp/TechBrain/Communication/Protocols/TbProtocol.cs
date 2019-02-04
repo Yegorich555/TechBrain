@@ -11,13 +11,13 @@ namespace TechBrain.Communication.Protocols
 {
     public class TbProtocol : Protocol
     {
-        readonly byte address;
-        readonly bool canAnswer;
+        readonly byte _address;
+        readonly bool _canAnswer;
 
         public TbProtocol(IDriver driver, bool canAnswer = true, int address = 0) : base(driver)
         {
-            this.address = address != 0 ? (byte)address : TbProtocol.DefaultAddr;
-            this.canAnswer = canAnswer;
+            _address = address != 0 ? (byte)address : TbProtocol.DefaultAddr;
+            _canAnswer = canAnswer;
         }
         #region Static
         public static byte StartByte { get; set; } = (byte)'>';
@@ -304,7 +304,7 @@ namespace TechBrain.Communication.Protocols
             while (true)
             {
                 var parcel = client.Read(TbProtocol.StartByte, TbProtocol.EndByte, TbProtocol.MaxParcelSize);
-                var result = TbProtocol.FindParcel(parcel, addr == 0 ? address : addr);
+                var result = TbProtocol.FindParcel(parcel, addr == 0 ? _address : addr);
                 if (result != null)
                     return extractFunc(parcel);
             }
@@ -333,9 +333,9 @@ namespace TechBrain.Communication.Protocols
         {
             using (var client = Driver.OpenClient())
             {
-                var bt = TbProtocol.GetParcel_SetClock(dt, canAnswer);
+                var bt = TbProtocol.GetParcel_SetClock(dt, _canAnswer);
                 client.Write(bt);
-                if (!canAnswer)
+                if (!_canAnswer)
                     return;
                 var addr = WaitResponse(client, TbProtocol.ExtractAddressFrom);
             }
@@ -345,7 +345,7 @@ namespace TechBrain.Communication.Protocols
         {
             using (var client = Driver.OpenClient())
             {
-                var bt = TbProtocol.GetParcel_GetSensors(address);
+                var bt = TbProtocol.GetParcel_GetSensors(_address);
                 client.Write(bt);
                 var values = WaitResponse(client, TbProtocol.ExtractSensorValues);
                 var count = Math.Min(values.Count, sensors.Count);
@@ -364,12 +364,12 @@ namespace TechBrain.Communication.Protocols
 
             using (var client = Driver.OpenClient())
             {
-                var bt = TbProtocol.GetParcel_ChangeOut(address, number, value, canAnswer);
+                var bt = TbProtocol.GetParcel_ChangeOut(_address, number, value, _canAnswer);
                 client.Write(bt);
-                if (!canAnswer)
+                if (!_canAnswer)
                     return;
                 var addr = WaitResponse(client, TbProtocol.ExtractAddressFrom);
-                if (addr != address)
+                if (addr != _address)
                     throw new InvalidOperationException("Address mismatches {addr} != {address}");
 
                 return;

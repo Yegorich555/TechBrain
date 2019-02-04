@@ -64,13 +64,13 @@ namespace TechBrain.Entities
 
         public DateTime? IsOnlineDate { get; private set; }
         public List<Sensor> Sensors { get; set; }
-
         public List<Output> Outputs { get; set; }
         public virtual bool HasTime { get; set; }
-        public virtual bool HasResponse { get; set; } = true;
 
-        public int ResponseTimeout { get; set; }
-        //todo public int Repeats { get; set; }
+        public virtual bool HasResponse { get; set; } = true;
+        public int ResponseTimeout { get; set; } = 5000;
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public int ResponseRepeats { get; set; }
 
         public TimeSpan? SleepTime { get; set; }
         public DateTime? WakeUpTime { get; set; }
@@ -166,7 +166,18 @@ namespace TechBrain.Entities
                     throw new DeviceException($"Device does not have IpAddress");
                 if (WakeUpTime > DateTime.Now)
                     throw new DeviceException($"Device will wake up at {WakeUpTime.Value.ToString("dd HH:mm:ss")}");
-                action();
+
+                int i = 0;
+                while (true)
+                {
+                    try { action(); }
+                    catch (TimeoutException)
+                    {
+                        if (++i >= ResponseRepeats)
+                            throw;
+                    }
+                    break;
+                }
 
                 if (cacheKey != null)
                     _cache.Set((CacheKeys)cacheKey, true, TimeSpan.FromMilliseconds(_cacheTime));
@@ -175,6 +186,7 @@ namespace TechBrain.Entities
                     IsOnline = true;
             }
         }
+
         #endregion
 
         #region PublicMethods
@@ -183,7 +195,17 @@ namespace TechBrain.Entities
             if (!HasResponse)
                 throw new DeviceException($"Device does not support Ping command"); ;
 
-            BaseCommand(() => IsOnline = Protocol.Ping(), CacheKeys.Ping);
+            BaseCommand(() =>
+            {
+                var i = 0;
+                while (true)
+                {
+                    var ok = Protocol.Ping();
+                    IsOnline = ok;
+                    if (!ok || ++i >= ResponseRepeats)
+                        break;
+                }
+            }, CacheKeys.Ping);
             return IsOnline == true;
         }
 
