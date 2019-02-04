@@ -45,18 +45,15 @@ namespace TechBrain.Entities
         public string Name { get; set; }
         public string Description { get; set; }
 
-        bool? isOnline;
+        bool? _isOnline;
         [SaveIgnore]
         public bool? IsOnline
         {
-            get
-            {
-                return HasResponse ? isOnline : null;
-            }
+            get => HasResponse ? _isOnline : null;
             set
             {
-                isOnline = value;
-                if (isOnline == true)
+                _isOnline = value;
+                if (_isOnline == true)
                     IsOnlineDate = DateTime.Now.TruncateToSeconds();
             }
 
@@ -73,11 +70,19 @@ namespace TechBrain.Entities
         public int ResponseRepeats { get; set; }
 
         public TimeSpan? SleepTime { get; set; }
-        public DateTime? WakeUpTime { get; set; }
 
-        [SaveIgnore]
-        [JsonIgnore]
-        public bool IsWaitSyncTime { get; set; } //todo maybe store use another place
+        DateTime? _wakeUpTime;
+        public DateTime? WakeUpTime
+        {
+            get => _wakeUpTime;
+            set
+            {
+                _wakeUpTime = value;
+                if (_wakeUpTime.HasValue)
+                    _wakeUpTime.Value.TruncateToSeconds().AddSeconds(10);
+
+            }
+        }
         public int? IpPort { get; set; }
 
         IPAddress ipAddress;
@@ -88,7 +93,7 @@ namespace TechBrain.Entities
             set
             {
                 ipAddress = value;
-                isNeedIp = false;
+                _isNeedIp = false;
             }
         }
 
@@ -97,10 +102,13 @@ namespace TechBrain.Entities
         [JsonIgnore]
         public bool IsESP { get => Type == DeviceTypes.ESP || Type == DeviceTypes.ESP_AVR; }
 
-        bool isNeedIp = false;
+        bool _isNeedIp = false;
         [SaveIgnore]
         [JsonIgnore]
-        public bool IsNeedIp { get => IsESP && (isNeedIp || IpAddress == null); }
+        public bool IsNeedIp { get => IsESP && (_isNeedIp || IpAddress == null); }
+
+        internal bool IsWaitSyncTime { get; set; }
+        internal DateTime SensorsNextTime { get; set; } = DateTime.MinValue;
         #endregion
 
         [DefaultValue(OutputTypes.None)]
@@ -286,7 +294,7 @@ namespace TechBrain.Entities
             IsOnline = false;
             WakeUpTime = DateTime.Now.Add(time);
 
-            isNeedIp = true;
+            _isNeedIp = true;
         }
         #endregion
     }

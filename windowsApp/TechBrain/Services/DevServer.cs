@@ -74,7 +74,6 @@ namespace TechBrain.Services
         #endregion
 
         #region PrivateMethods
-        readonly Dictionary<int, DateTime> scheduleSensors = new Dictionary<int, DateTime>();
         readonly object lockObj = new object();
         void Scan_CallBack(object sender, CustomEventArgs.CommonEventArgs e)
         {
@@ -98,14 +97,14 @@ namespace TechBrain.Services
                         if (item.Sensors?.Count > 0)
                         {
                             var now = DateTime.Now;
-                            if (!scheduleSensors.TryGetValue(item.Id, out var dateTime) || dateTime >= now)
+                            if (item.SensorsNextTime >= now)
                             {
                                 queue.Add(() => { item.UpdateSensors(); });
-                                scheduleSensors[item.Id] = now.Add(TimeSpan.FromMilliseconds(_config.SensorsScanTime));
+                                item.SensorsNextTime = now.Add(TimeSpan.FromMilliseconds(_config.SensorsScanTime));
                             }
                         }
 
-                        if (item.SleepTime != null) //todo calculate sleepTime by RequestSensorsInterval
+                        if (item.SleepTime != null)
                             queue.Add(() => item.Sleep());
 
                         if (item.HasResponse && !queue.Any())
