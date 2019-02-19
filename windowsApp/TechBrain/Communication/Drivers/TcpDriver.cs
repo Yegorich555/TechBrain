@@ -22,15 +22,16 @@ namespace TechBrain.Communication.Drivers
 
         public IDriverClient OpenClient()
         {
-            var client = new TcpClient
-            {
-                SendTimeout = ResponseTimeout / 2,
-                ReceiveTimeout = ResponseTimeout / 2
-            };
-            client.Connect(ipAddress, ipPort); 
-            //todo Add handling timeout connection exception
-            //if (!client.ConnectAsync("remotehost", remotePort).Wait(client.SendTimeout))
-            return new Client(client, ResponseTimeout);
+            var client = new TcpClient();
+
+            var sw = new Stopwatch();
+            sw.Start();
+            if (!client.ConnectAsync(ipAddress, ipPort).Wait(ResponseTimeout))
+                throw new TimeoutException($"Tcp open timeout: {ResponseTimeout}ms to {ipAddress.ToStringNull()}:{ipPort}");
+            sw.Stop();
+
+            var remainedTimeout = ResponseTimeout - Convert.ToInt32(sw.ElapsedMilliseconds);
+            return new Client(client, remainedTimeout);
         }
 
         public class Client : IDriverClient
@@ -55,6 +56,7 @@ namespace TechBrain.Communication.Drivers
 
             void WrapWrite(Action func)
             {
+                client.SendTimeout = responseTimeout;
                 var sw = new Stopwatch();
                 sw.Start();
                 func();
