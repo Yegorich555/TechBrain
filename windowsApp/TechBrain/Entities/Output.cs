@@ -21,6 +21,8 @@ namespace TechBrain.Entities
         [DefaultValue(OutputTypes.None)]
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
         public OutputTypes Type { get; set; }
+
+        [SaveIgnore]
         public int? Value { get; internal set; }
 
         public override string ToString()

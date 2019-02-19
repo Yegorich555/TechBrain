@@ -241,24 +241,30 @@ namespace TechBrain.Entities
                 throw new DeviceException("Device has not Outputs");
             if (Outputs.Count > num || num < 0)
                 throw new DeviceException($"Device has not Output {num}");
-            if (value > 1 && value < 100) //only 0, 1 or 100 for value digit
+
+            var isNeedChange = false;
+            var isPwmValue = value > 1 && value < 100;//only 0, 1 or 100 for value digit
+            var i = num == 0 ? 0 : num - 1;
+            var cnt = num == 0 ? Outputs.Count : i + 1;
+            for (; i < cnt; ++i)
             {
-                var i = num == 0 ? 0 : num - 1;
-                var cnt = num == 0 ? Outputs.Count : i + 1;
-                for (; i < cnt; ++i)
-                {
-                    var output = Outputs[i];
-                    if (output.Type != OutputTypes.Pwm)
-                        throw new DeviceException($"Device Output {num} is {output.Type.ToString()} and it is not PWM. Output can not take value {value}");
-                }
+                var output = Outputs[i];
+                if (isPwmValue && output.Type != OutputTypes.Pwm)
+                    throw new DeviceException($"Device Output {num} is {output.Type.ToString()} and it is not PWM. Output can not take value {value}");
+
+                if (output.Value != value)
+                    isNeedChange = true;
             }
 
-            //todo compare with Outputs before
+            if (!isNeedChange) //nothing to change
+                return;
+
             BaseCommand(() => Protocol.SetOut(num, value));
+
             if (num == 0)
                 Outputs.ForEach(a => a.Value = value);
             else
-                Outputs[num - 1].Value = value; //todo not always is actually
+                Outputs[num - 1].Value = value;
         }
 
         public void Sleep()
