@@ -271,6 +271,7 @@ namespace TechBrain.Entities
         {
             if (SleepTime == null)
                 throw new DeviceException($"Device doesn't have sleep time");
+            Sleep(SleepTime.Value);
         }
 
         public void Sleep(TimeSpan time)
