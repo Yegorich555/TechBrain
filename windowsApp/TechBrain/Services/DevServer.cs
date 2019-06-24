@@ -39,25 +39,33 @@ namespace TechBrain.Services
         #region Public Methods
         public void Start()
         {
-            _tcpServer = new TcpServer
+            if (paused)
             {
-                Port = _config.DevServer_TcpPort,
-                ReceiveTimeout = _config.TcpResponseTimeout / 2,
-                SendTimeout = _config.TcpResponseTimeout / 2,
-                ThreadName = "DevServer_ESP_TCP",
-            };
-            _tcpServer.GotNewClient += GotNewClient;
-            _tcpServer.Start();
+                paused = false;
+            }
+            else
+            {
+                _tcpServer = new TcpServer
+                {
+                    Port = _config.DevServer_TcpPort,
+                    ReceiveTimeout = _config.TcpResponseTimeout / 2,
+                    SendTimeout = _config.TcpResponseTimeout / 2,
+                    ThreadName = "DevServer_ESP_TCP",
+                };
+                _tcpServer.GotNewClient += GotNewClient;
+                _tcpServer.Start();
 
-            DateTimeService.Instance.HourChanged += OnHourChanged;
+                DateTimeService.Instance.HourChanged += OnHourChanged;
 
-            _scanTimer = new AsyncTimer(_config.DeviceScanTime);
-            _scanTimer.CallBack += Scan_CallBack;
-            _scanTimer.Start();
+                _scanTimer = new AsyncTimer(_config.DeviceScanTime);
+                _scanTimer.CallBack += Scan_CallBack;
+                _scanTimer.Start();
+            }
         }
 
         public void Stop()
         {
+            paused = false;
             if (_tcpServer != null)
             {
                 _tcpServer.Stop();
@@ -71,12 +79,22 @@ namespace TechBrain.Services
                 _scanTimer = null;
             }
         }
+
+        volatile bool paused = false;
+        public void PauseScan()
+        {
+            paused = true;
+        }
         #endregion
 
         #region PrivateMethods
         readonly object lockObj = new object();
         void Scan_CallBack(object sender, CustomEventArgs.CommonEventArgs e)
         {
+            if (paused)
+            {
+                return;
+            }
             bool lockTaken = false;
             try
             {

@@ -55,19 +55,24 @@ namespace ConsoleTest
                     var str = Encoding.ASCII.GetString(bytes);
                     if (str.Contains("esp_"))
                     {
+                        Task task = null;
                         var result = (str.Contains("esp_") ? "OK: " : "Error: ") + str.Replace("esp_", "") + '\n';
                         if (!str.Contains("sleep"))
                             stream.Write(Encoding.ASCII.GetBytes(result));
                         else
-                            Task.Run(() =>
-                            {
-                                var sec = int.Parse(str.Extract('(', ')'));
-                                Thread.Sleep(sec);
-                                EspSend(devices[0].SerialNumber);
-                                EspSend(devices[1].SerialNumber);
+                            task = Task.Run(async () =>
+                              {
+                                  var sec = int.Parse(str.Extract('(', ')'));
+                                  Trace.WriteLine($"Simulator is sleeping for {sec}sec");
+                                  await Task.Delay(TimeSpan.FromSeconds(sec));
+                                  Trace.WriteLine($"Simulator is woken up:");
+                                  EspSend(devices[0].SerialNumber);
+                                  EspSend(devices[1].SerialNumber);
 
-                            });
+                              });
                         Trace.WriteLine($"Simulator get: '{str.Replace("\n", "/n")}'");
+                        if (task != null)
+                            task.Wait();
                     }
                     else
                     {

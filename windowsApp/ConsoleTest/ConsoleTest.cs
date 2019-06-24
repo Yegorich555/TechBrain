@@ -45,14 +45,18 @@ namespace ConsoleTest
                 if (devServer.DeviceRepository.Count == 0)
                     devServer = new DevServer(config, Simulator.GenerateNewDevices(config));
                 devServer.Start();
-
+                
                 var devices = devServer.DeviceRepository.GetAll();
                 var sim = new Simulator(config, devices);
                 sim.Start();
                 foreach (var dev in devices)
+                {
                     dev.IpPort = config.Esp_TcpPort;
+                    dev.SleepTime = null;
+                }
 
                 Thread.Sleep(100);
+                devServer.PauseScan();
                 while (true)
                 {
 
