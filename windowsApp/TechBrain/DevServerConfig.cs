@@ -4,7 +4,7 @@ using TechBrain.IO;
 
 namespace TechBrain
 {
-    public class Config
+    public class DevServerConfig
     {
         public int DevServer_TcpPort { get; set; } = 1234;
         public int TcpResponseTimeout { get; set; } = 1000;
@@ -12,7 +12,7 @@ namespace TechBrain
 
         //public string ComPort { get; set; } = "COM3";
         public string PathDevices { get; set; } = "devices.json";
-        public const string PathConfig = "config.json";
+        public const string PathConfig = "devconfig.json";
 
         public int DeviceScanTime { get; set; } = 1000;//ms
         public int SensorsScanTime { get; set; } = 5000;//ms
@@ -24,13 +24,13 @@ namespace TechBrain
             File.WriteAllText(PathConfig, json);
         }
 
-        public static Config ReadFromFile()
+        public static DevServerConfig ReadFromFile()
         {
             if (FileSystem.TryRead(PathConfig, out string text))
-                return JsonConvert.DeserializeObject<Config>(text);
+                return JsonConvert.DeserializeObject<DevServerConfig>(text);
             else
             {
-                var v = new Config();
+                var v = new DevServerConfig();
                 v.SaveToFile();
                 return v;
             }

@@ -21,7 +21,7 @@ namespace ConsoleLauncher
                 
                 Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
 
-                var config = Config.ReadFromFile();
+                var config = DevServerConfig.ReadFromFile();
                 var devServer = new DevServer(config);
                 devServer.Start();
 

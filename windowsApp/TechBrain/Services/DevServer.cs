@@ -20,17 +20,17 @@ namespace TechBrain.Services
         public DeviceRepository DeviceRepository { get; set; }
         #endregion
 
-        Config _config;
+        DevServerConfig _config;
         TcpServer _tcpServer;
         AsyncTimer _scanTimer;
 
-        public DevServer(Config config, IEnumerable<Device> devices) : this(config)
+        public DevServer(DevServerConfig config, IEnumerable<Device> devices) : this(config)
         {
             DeviceRepository = new DeviceRepository(config.PathDevices, devices);
             DeviceRepository.Commit();
         }
 
-        public DevServer(Config config)
+        public DevServer(DevServerConfig config)
         {
             _config = config;
             DeviceRepository = new DeviceRepository(config.PathDevices);
@@ -101,7 +101,7 @@ namespace TechBrain.Services
                 Monitor.TryEnter(lockObj, ref lockTaken);
                 if (lockTaken)
                 {
-                    Trace.WriteLine("DevServer. Go scan...");
+                    //Debug.WriteLine("DevServer. Go scan...");
                     var lst = DeviceRepository.GetAll();
                     foreach (var item in lst)
                     {

@@ -40,7 +40,7 @@ namespace ConsoleTest
                 Console.Title = "Simulator_TechBrain";
                 Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
 
-                var config = Config.ReadFromFile();
+                var config = DevServerConfig.ReadFromFile();
                 var devServer = new DevServer(config);
                 if (devServer.DeviceRepository.Count == 0)
                     devServer = new DevServer(config, Simulator.GenerateNewDevices(config));

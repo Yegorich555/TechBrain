@@ -1,0 +1,9 @@
+{
+  "DevServer_TcpPort": 1234,
+  "TcpResponseTimeout": 1000,
+  "Esp_TcpPort": 1999,
+  "PathDevices": "devices.json",
+  "DeviceScanTime": 1000,
+  "SensorsScanTime": 5000,
+  "DeviceCacheTime": 500
+}

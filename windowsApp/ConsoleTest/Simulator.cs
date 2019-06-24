@@ -16,10 +16,10 @@ namespace ConsoleTest
 {
     class Simulator
     {
-        private Config config;
+        private DevServerConfig config;
         private readonly List<Device> devices;
         TcpServer _tcpServer;
-        public Simulator(Config config, List<Device> devices)
+        public Simulator(DevServerConfig config, List<Device> devices)
         {
             this.config = config;
             this.devices = devices;
@@ -119,7 +119,7 @@ namespace ConsoleTest
             }
         }
 
-        public static List<Device> GenerateNewDevices(Config config)
+        public static List<Device> GenerateNewDevices(DevServerConfig config)
         {
             var lst = new List<Device>();
             lst.Add(new Device(config.DeviceCacheTime)
