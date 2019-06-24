@@ -1,14 +1,19 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 using TechBrain.Extensions;
 
 namespace TechBrain.Communication.Drivers
 {
     public class TcpDriver : IDriver
     {
+        internal static ConcurrentDictionary<string, Client> openedClients = new ConcurrentDictionary<string, Client>();
+
         private readonly IPAddress ipAddress;
         private int ipPort;
 
@@ -22,8 +27,14 @@ namespace TechBrain.Communication.Drivers
 
         public IDriverClient OpenClient()
         {
+            var key = ipAddress + ":" + ipPort;
+            if (openedClients.TryGetValue(key, out var result) && result.Connected) //todo Connected is not always the truth
+            {
+                result.responseTimeout = ResponseTimeout;
+                result.BreakDispose();
+                return result;
+            }
             var client = new TcpClient();
-
             var sw = new Stopwatch();
             sw.Start();
             if (!client.ConnectAsync(ipAddress, ipPort).Wait(ResponseTimeout))
@@ -31,19 +42,23 @@ namespace TechBrain.Communication.Drivers
             sw.Stop();
 
             var remainedTimeout = ResponseTimeout - Convert.ToInt32(sw.ElapsedMilliseconds);
-            return new Client(client, remainedTimeout);
+            result = new Client(client, remainedTimeout, key);
+            openedClients.TryAdd(key, result);
+            return result;
         }
 
         public class Client : IDriverClient
         {
-            private readonly int responseTimeout;
+            internal int responseTimeout;
             private int writeTime;
             private TcpClient client;
+            private string key;
 
-            public Client(TcpClient client, int responseTimeout)
+            public Client(TcpClient client, int responseTimeout, string key)
             {
                 this.client = client;
                 this.responseTimeout = responseTimeout;
+                this.key = key;
             }
 
             T WrapRead<T>(Func<T> func)
@@ -70,10 +85,37 @@ namespace TechBrain.Communication.Drivers
             public void Write(string v) => WrapWrite(() => client.Write(v));
             public void Write(IEnumerable<byte> bt) => WrapWrite(() => client.Write(bt));
 
+            CancellationTokenSource tokenSource;// = new CancellationTokenSource();
+
+            public bool Connected { get => client.Connected; }
+
+            //dispose with delay
             public void Dispose()
             {
-                client.Close();
-                client.Dispose();
+                tokenSource = new CancellationTokenSource();
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        await Task.Delay(TimeSpan.FromMilliseconds(100), tokenSource.Token);
+                        if (!tokenSource.Token.IsCancellationRequested)
+                        {
+                            openedClients.TryRemove(key, out var value);
+                            client.Close();
+                            client.Dispose();
+                        }
+                    }
+                    catch (TaskCanceledException) { }
+                    catch (Exception ex)
+                    {
+                        Trace.WriteLine(ex);//todo logger
+                    }
+                }, tokenSource.Token);
+            }
+
+            internal void BreakDispose()
+            {
+                tokenSource.Cancel();
             }
         }
     }

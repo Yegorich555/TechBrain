@@ -156,7 +156,6 @@ namespace TechBrain.Entities
                 throw new NotImplementedException();
             }
         }
-
         #endregion
 
         #region PrivateMethods
@@ -230,7 +229,7 @@ namespace TechBrain.Entities
             if (!HasResponse)
                 throw new DeviceException("Device does not support Reponse");
             if (Sensors == null || Sensors.Count < 1)
-                throw new DeviceException("Device has not Sensors");
+                throw new DeviceException("Device has no Sensors");
 
             BaseCommand(() => Protocol.UpdateSensors(Sensors), CacheKeys.UpdateSensors);
         }
@@ -238,9 +237,9 @@ namespace TechBrain.Entities
         public void SetOut(int num, int value) //num == 0 for all outs
         {
             if (Outputs == null || Outputs.Count < 1)
-                throw new DeviceException("Device has not Outputs");
+                throw new DeviceException("Device has no Outputs");
             if (Outputs.Count > num || num < 0)
-                throw new DeviceException($"Device has not Output {num}");
+                throw new DeviceException($"Device has no Output {num}");
 
             var isNeedChange = false;
             var isPwmValue = value > 1 && value < 100;//only 0, 1 or 100 for value digit

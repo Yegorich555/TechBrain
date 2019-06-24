@@ -132,8 +132,15 @@ namespace TechBrain.Services
                         {
                             Task.Run(() => WrapError(() =>
                             {
-                                foreach (var action in queue) //todo queue inside driver of device for prevent 'open-close-open...'
-                                    action();
+                                try
+                                {
+                                    foreach (var action in queue)
+                                        action();
+                                }
+                                catch (Exception ex)
+                                {
+                                    Trace.WriteLine(ex); //todo Logger
+                                }
                             }));
                         }
                     }
