@@ -12,6 +12,8 @@ namespace TechBrain.Communication.Drivers
 {
     public class TcpDriver : IDriver
     {
+        const int CloseDelay = 300;//ms
+
         internal static ConcurrentDictionary<string, Client> openedClients = new ConcurrentDictionary<string, Client>();
 
         private readonly IPAddress ipAddress;
@@ -97,7 +99,7 @@ namespace TechBrain.Communication.Drivers
                 {
                     try
                     {
-                        await Task.Delay(TimeSpan.FromMilliseconds(100), tokenSource.Token);
+                        await Task.Delay(TimeSpan.FromMilliseconds(CloseDelay), tokenSource.Token);
                         if (!tokenSource.Token.IsCancellationRequested)
                         {
                             openedClients.TryRemove(key, out var value);
