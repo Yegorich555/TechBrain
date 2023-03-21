@@ -3,27 +3,31 @@
         "pathESP8266": "${env.LOCALAPPDATA}\\Arduino15\\packages\\esp8266",
         "pathArduino": "${env.ProgramFiles(x86)}\\Arduino"
     },
-    "configurations": [{
-        "name": "Win32",
-        "includePath": [
-            "${env.pathESP8266}\\tools\\**",
-            "${env.pathESP8266}\\hardware\\esp8266\\2.4.2\\**",
-            "${workspaceFolder}"
-        ],
-        "defines": [
-            "_DEBUG",
-            "UNICODE",
-            "_UNICODE"
-        ],
-        "browse": {
-            "limitSymbolsToIncludedHeaders": false,
-            "path": [
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${env.pathESP8266}\\tools\\**",
                 "${env.pathESP8266}\\hardware\\esp8266\\2.4.2\\**",
-                "${workspaceFolder}"
-            ]
-        },
-        "intelliSenseMode": "msvc-x64",
-        "forcedInclude": []
-    }],
+                "${workspaceFolder}",
+                "C:\\Users\\YegorVM\\AppData\\Local\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\2.4.2\\**",
+                "C:\\Users\\YegorVM\\AppData\\Local\\Arduino15\\packages\\esp8266\\tools\\**"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "browse": {
+                "limitSymbolsToIncludedHeaders": false,
+                "path": [
+                    "${env.pathESP8266}\\hardware\\esp8266\\2.4.2\\**",
+                    "${workspaceFolder}"
+                ]
+            },
+            "intelliSenseMode": "msvc-x64",
+            "forcedInclude": []
+        }
+    ],
     "version": 4
 }
